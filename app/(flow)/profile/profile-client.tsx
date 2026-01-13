@@ -1,14 +1,22 @@
 "use client";
 
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import ProfileTypeStep from '@/components/flow/ProfileTypeStep';
+import MatchingLoader from '@/components/flow/MatchingLoader';
 import type { ProfileData } from '@/types';
 
 export default function ProfileClient() {
   const router = useRouter();
+  const [showLoader, setShowLoader] = useState(false);
 
   const handleComplete = (data: ProfileData) => {
-    // Navigate to selection step
+    // Show loader before navigating to selection
+    setShowLoader(true);
+  };
+
+  const handleLoaderComplete = () => {
+    // Navigate to selection step after loader finishes
     router.push('/selection');
   };
 
@@ -19,6 +27,10 @@ export default function ProfileClient() {
   const handleClose = () => {
     router.push('/');
   };
+
+  if (showLoader) {
+    return <MatchingLoader onComplete={handleLoaderComplete} duration={5000} />;
+  }
 
   return (
     <ProfileTypeStep

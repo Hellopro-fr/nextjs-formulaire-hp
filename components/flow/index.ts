@@ -14,3 +14,7 @@ export { default as WarningBanner } from './WarningBanner';
 export { default as CriteriaChangedBanner } from './CriteriaChangedBanner';
 export { default as ModifyCriteriaForm } from './ModifyCriteriaForm';
 export { default as CustomNeedForm } from './CustomNeedForm';
+export { default as ProductComparisonModal } from './ProductComparisonModal';
+export { default as ProductDetailModal } from './ProductDetailModal';
+export { default as MatchingLoader } from './MatchingLoader';
+export { default as QuickNeedInput } from './QuickNeedInput';

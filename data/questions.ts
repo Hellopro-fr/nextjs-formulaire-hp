@@ -11,6 +11,7 @@ export const QUESTIONS_DATA: Question[] = [
     justification: "Cette question détermine la capacité de levage nécessaire (3T, 4T, 5T ou plus) et la longueur des bras (symétriques ou asymétriques) pour assurer la stabilité des véhicules.",
     multiSelect: true,
     answers: [
+      { id: "1-quick", mainText: "Je sais exactement ce qu'il me faut", secondaryText: "Décrivez votre besoin précis" },
       { id: "1-1", mainText: "Citadines et berlines compactes", secondaryText: "Capacité standard ~3T suffisant" },
       { id: "1-2", mainText: "Berlines, petits SUV", secondaryText: "Polyvalence, capacité 3.2T à 3.5T" },
       { id: "1-3", mainText: "Gros SUV, 4x4, Pick-up", secondaryText: "Nécessite capacité 3.5T à 4T et bras renforcés" },

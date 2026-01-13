@@ -11,6 +11,8 @@ import ContactForm from "./ContactForm";
 import ModifyCriteriaForm from "./ModifyCriteriaForm";
 import CustomNeedForm from "./CustomNeedForm";
 import CriteriaChangedBanner from "./CriteriaChangedBanner";
+import ProductComparisonModal from "./ProductComparisonModal";
+import ProductDetailModal from "./ProductDetailModal";
 import { RECOMMENDED_SUPPLIERS_DATA, OTHER_SUPPLIERS_DATA, ALL_SUPPLIERS_DATA } from "@/data/suppliers";
 import { DEFAULT_CRITERIA } from "@/data/criteria";
 import { useFlowStore } from "@/lib/stores/flow-store";
@@ -432,6 +434,30 @@ const SupplierSelectionModal = ({
           </div>
         </div>
       )}
+
+      {/* Product Comparison Modal */}
+      {showComparison && (
+        <ProductComparisonModal
+          products={ALL_SUPPLIERS_DATA}
+          selectedIds={selectedIds}
+          onToggle={toggleSupplier}
+          onClose={() => setShowComparison(false)}
+        />
+      )}
+
+      {/* Product Detail Modal */}
+      {selectedProductId && (() => {
+        const product = ALL_SUPPLIERS_DATA.find((s) => s.id === selectedProductId);
+        if (!product) return null;
+        return (
+          <ProductDetailModal
+            product={product}
+            isSelected={selectedIds.has(selectedProductId)}
+            onSelect={() => toggleSupplier(selectedProductId)}
+            onClose={() => setSelectedProductId(null)}
+          />
+        );
+      })()}
     </div>
   );
 };

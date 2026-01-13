@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import ProgressHeader from "./ProgressHeader";
 import QuestionScreen from "./QuestionScreen";
+import QuickNeedInput from "./QuickNeedInput";
 import { QUESTIONS } from "@/data/questions";
 import { useFlowStore } from "@/lib/stores/flow-store";
 
@@ -11,8 +12,14 @@ import { trackFunnelStart, trackQuestionAnswered, trackQuestionNavigation, track
 import { trackGA4QuestionAnswered, trackGA4QuestionnaireComplete } from "@/lib/analytics/ga4";
 import { tagHotjarUser, HOTJAR_TAGS } from "@/lib/analytics/hotjar";
 
+interface QuickNeedData {
+  text: string;
+  audioBlob?: Blob;
+  file?: File;
+}
+
 interface NeedsQuestionnaireProps {
-  onComplete: (answers: Record<number, string[]>) => void;
+  onComplete: (answers: Record<number, string[]>, quickNeed?: QuickNeedData) => void;
   onClose?: () => void;
 }
 
@@ -29,6 +36,8 @@ const NeedsQuestionnaire = ({ onComplete, onClose }: NeedsQuestionnaireProps) =>
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<number, string[]>>({});
   const [otherTexts, setOtherTexts] = useState<Record<number, string>>({});
+  const [showQuickInput, setShowQuickInput] = useState(false);
+  const [quickNeedData, setQuickNeedData] = useState<QuickNeedData | null>(null);
 
   // Get flow store actions
   const { setUserAnswers, setOtherTexts: storeOtherTexts, setStartTime, startTime } = useFlowStore();
@@ -55,6 +64,12 @@ const NeedsQuestionnaire = ({ onComplete, onClose }: NeedsQuestionnaireProps) =>
   }, [answers]);
 
   const handleSelectAnswer = (answerId: string, autoAdvance?: boolean) => {
+    // Check if "quick input" option is selected
+    if (answerId === "1-quick" && currentQuestion.id === 1) {
+      setShowQuickInput(true);
+      return;
+    }
+
     const currentAnswers = answers[currentQuestion.id] || [];
 
     if (currentQuestion.multiSelect) {
@@ -102,6 +117,13 @@ const NeedsQuestionnaire = ({ onComplete, onClose }: NeedsQuestionnaireProps) =>
     }));
   };
 
+  const handleQuickNeedSubmit = (data: QuickNeedData) => {
+    setQuickNeedData(data);
+    // Skip to question 2 (index 1) after quick input
+    setShowQuickInput(false);
+    setCurrentQuestionIndex(1);
+  };
+
   const handleNext = () => {
     if (currentQuestionIndex < totalQuestions - 1) {
       trackQuestionNavigation(currentQuestionIndex, currentQuestionIndex + 1, 'next');
@@ -119,11 +141,15 @@ const NeedsQuestionnaire = ({ onComplete, onClose }: NeedsQuestionnaireProps) =>
       setUserAnswers(answers);
       storeOtherTexts(otherTexts);
 
-      onComplete(answers);
+      onComplete(answers, quickNeedData || undefined);
     }
   };
 
   const handleBack = () => {
+    if (showQuickInput) {
+      setShowQuickInput(false);
+      return;
+    }
     if (currentQuestionIndex > 0) {
       trackQuestionNavigation(currentQuestionIndex, currentQuestionIndex - 1, 'back');
       setCurrentQuestionIndex((prev) => prev - 1);
@@ -143,20 +169,27 @@ const NeedsQuestionnaire = ({ onComplete, onClose }: NeedsQuestionnaireProps) =>
       />
 
       <div className="flex-1 overflow-y-auto">
-        <QuestionScreen
-          question={currentQuestion}
-          currentIndex={currentQuestionIndex}
-          totalQuestions={totalQuestions}
-          selectedAnswers={answers[currentQuestion.id] || []}
-          otherText={otherTexts[currentQuestion.id] || ""}
-          onSelectAnswer={handleSelectAnswer}
-          onOtherTextChange={handleOtherTextChange}
-          onNext={handleNext}
-          onBack={handleBack}
-          isFirst={currentQuestionIndex === 0}
-          isLast={currentQuestionIndex === totalQuestions - 1}
-          matchingProductCount={matchingProductCount}
-        />
+        {showQuickInput ? (
+          <QuickNeedInput
+            onSubmit={handleQuickNeedSubmit}
+            onBack={() => setShowQuickInput(false)}
+          />
+        ) : (
+          <QuestionScreen
+            question={currentQuestion}
+            currentIndex={currentQuestionIndex}
+            totalQuestions={totalQuestions}
+            selectedAnswers={answers[currentQuestion.id] || []}
+            otherText={otherTexts[currentQuestion.id] || ""}
+            onSelectAnswer={handleSelectAnswer}
+            onOtherTextChange={handleOtherTextChange}
+            onNext={handleNext}
+            onBack={handleBack}
+            isFirst={currentQuestionIndex === 0}
+            isLast={currentQuestionIndex === totalQuestions - 1}
+            matchingProductCount={matchingProductCount}
+          />
+        )}
       </div>
     </div>
   );
