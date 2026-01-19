@@ -22,7 +22,7 @@ interface ContactFormProps {
 const ContactForm = ({ selectedSuppliers, onBack }: ContactFormProps) => {
   const router = useRouter();
   const { userAnswers, profileData, selectedSupplierIds } = useFlowStore();
-  const leadSubmission = useLeadSubmission();
+  const leadSubmission = useLeadSubmission({ suppliers: selectedSuppliers });
 
   const [formData, setFormData] = useState<ContactFormData>({
     email: "",
@@ -132,7 +132,7 @@ const ContactForm = ({ selectedSuppliers, onBack }: ContactFormProps) => {
     // Identify user before submission
     identifyUser(
       formData.email,
-      profileData?.profileType || 'unknown',
+      profileData?.type || 'unknown',
       formData.company || profileData?.company?.name
     );
 
