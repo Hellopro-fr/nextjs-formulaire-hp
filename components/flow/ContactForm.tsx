@@ -1,24 +1,18 @@
 "use client";
 
 import { ArrowLeft, Send, Shield, Clock, CheckCircle, Paperclip, X } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useLeadSubmission } from "@/hooks/api/useLeadSubmission";
+import { useBuyerCheck } from "@/hooks/api";
 import { useFlowStore } from "@/lib/stores/flow-store";
 import type { Supplier, ContactFormData } from "@/types";
-import CountryCodeSelect from "./CountryCodeSelect";
+import PhoneInput from "./PhoneInput";
+import { validatePhoneNumber } from "@/lib/utils/phone-validation";
 
 // Analytics imports
 import { trackContactFormView, trackFormSubmitAttempt, trackFormValidationErrors, identifyUser } from "@/lib/analytics";
-
-// Mock list of existing buyers in database
-const EXISTING_BUYERS = [
-  "jean.dupont@entreprise.fr",
-  "marie.martin@societe.com",
-  "contact@hellopro.fr",
-  "acheteur@garage-martin.fr",
-];
 
 interface ContactFormProps {
   selectedSuppliers: Supplier[];
@@ -28,7 +22,7 @@ interface ContactFormProps {
 const ContactForm = ({ selectedSuppliers, onBack }: ContactFormProps) => {
   const router = useRouter();
   const { userAnswers, profileData, selectedSupplierIds } = useFlowStore();
-  const leadSubmission = useLeadSubmission();
+  const leadSubmission = useLeadSubmission({ suppliers: selectedSuppliers });
 
   const [formData, setFormData] = useState<ContactFormData>({
     email: "",
@@ -44,30 +38,9 @@ const ContactForm = ({ selectedSuppliers, onBack }: ContactFormProps) => {
   const [files, setFiles] = useState<File[]>([]);
 
   // Track form view on mount
-  useState(() => {
+  useEffect(() => {
     trackContactFormView(selectedSuppliers.length);
-  });
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const newFiles = Array.from(e.target.files);
-      setFiles(prev => [...prev, ...newFiles]);
-      // Reset input to allow adding same file again if needed
-      e.target.value = '';
-    }
-  };
-
-  const removeFile = (index: number) => {
-    setFiles(prev => prev.filter((_, i) => i !== index));
-  };
-
-  // Check if email is from an existing buyer
-  const isExistingBuyer = useMemo(() => {
-    if (!formData.email || formData.email.length < 5) return false;
-    return EXISTING_BUYERS.some(
-      (email) => email.toLowerCase() === formData.email.toLowerCase()
-    );
-  }, [formData.email]);
+  }, [selectedSuppliers.length]);
 
   // Check if email is valid format
   const isEmailValid = useMemo(() => {
@@ -75,8 +48,31 @@ const ContactForm = ({ selectedSuppliers, onBack }: ContactFormProps) => {
     return emailRegex.test(formData.email);
   }, [formData.email]);
 
-  // Show additional fields only if email is valid and not an existing buyer
-  const showAdditionalFields = isEmailValid && !isExistingBuyer;
+  // Dynamic buyer check via API
+  const { data: buyerCheckResult } = useBuyerCheck(
+    {
+      email: formData.email,
+    },
+    isEmailValid
+  );
+
+  const isExistingBuyer = buyerCheckResult?.isDuplicate || false;
+  const isKnownBuyer = buyerCheckResult?.isKnown || false;
+
+  // Show additional fields only if email is valid and not a known buyer
+  const showAdditionalFields = isEmailValid && !isKnownBuyer;
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const newFiles = Array.from(e.target.files);
+      setFiles(prev => [...prev, ...newFiles]);
+      e.target.value = '';
+    }
+  };
+
+  const removeFile = (index: number) => {
+    setFiles(prev => prev.filter((_, i) => i !== index));
+  };
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -101,11 +97,11 @@ const ContactForm = ({ selectedSuppliers, onBack }: ContactFormProps) => {
     if (!formData.lastName.trim()) {
       newErrors.lastName = "Nom requis";
     }
-    if (!formData.company.trim()) {
-      if (formData.company !== undefined && !formData.company.trim()) { newErrors.company = "Société requise"; };
-    }
-    if (!formData.phone.trim() || formData.phone.replace(/\D/g, "").length < 10) {
-      newErrors.phone = "Téléphone invalide";
+
+    // Validation téléphone avec le nouveau système
+    const phoneValidation = validatePhoneNumber(formData.phone, formData.countryCode || "+33");
+    if (!phoneValidation.isValid) {
+      newErrors.phone = phoneValidation.error || "Téléphone invalide";
     }
 
     setErrors(newErrors);
@@ -136,7 +132,7 @@ const ContactForm = ({ selectedSuppliers, onBack }: ContactFormProps) => {
     // Identify user before submission
     identifyUser(
       formData.email,
-      profileData?.profileType || 'unknown',
+      profileData?.type || 'unknown',
       formData.company || profileData?.company?.name
     );
 
@@ -207,10 +203,16 @@ const ContactForm = ({ selectedSuppliers, onBack }: ContactFormProps) => {
               className={`w-full rounded-lg border ${errors.email ? 'border-destructive' : 'border-input'} bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all`}
               placeholder="vous@entreprise.com"
             />
-            {isExistingBuyer && (
+            {isKnownBuyer && (
               <div className="mt-2 flex items-center gap-2 text-sm text-green-600">
                 <CheckCircle className="h-4 w-4" />
                 <span>Nous vous avons reconnu ! Vos informations sont pré-enregistrées.</span>
+              </div>
+            )}
+            {isExistingBuyer && buyerCheckResult?.message && (
+              <div className="mt-2 flex items-center gap-2 text-sm text-orange-600">
+                <Shield className="h-4 w-4" />
+                <span>{buyerCheckResult.message}</span>
               </div>
             )}
             {errors.email && <p className="mt-1 text-sm text-destructive">{errors.email}</p>}
@@ -333,23 +335,14 @@ const ContactForm = ({ selectedSuppliers, onBack }: ContactFormProps) => {
             >
               Téléphone *
             </label>
-            <div className="flex gap-2">
-              <CountryCodeSelect
-                value={formData.countryCode || "+33"}
-                onChange={(value) => setFormData({ ...formData, countryCode: value })}
-              />
-              <input
-                type="tel"
-                id="phone"
-                name="phone"
-                required
-                value={formData.phone}
-                onChange={handleChange}
-                className={`flex-1 rounded-lg border ${errors.phone ? 'border-destructive' : 'border-input'} bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all`}
-                placeholder="6 12 34 56 78"
-              />
-            </div>
-            {errors.phone && <p className="mt-1 text-sm text-destructive">{errors.phone}</p>}
+            <PhoneInput
+              value={formData.phone}
+              countryCode={formData.countryCode || "+33"}
+              onValueChange={(phone) => setFormData({ ...formData, phone })}
+              onCountryCodeChange={(code) => setFormData({ ...formData, countryCode: code })}
+              error={errors.phone}
+              required
+            />
           </div>
           </>
           )}

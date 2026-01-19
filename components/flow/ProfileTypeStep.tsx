@@ -1,25 +1,12 @@
 'use client';
 
 import { useState, useMemo } from "react";
-import { ArrowLeft, ArrowRight, Search, Building2, Sparkles, Globe, User, MapPin, Info } from "lucide-react";
+import { ArrowLeft, ArrowRight, Search, Building2, Sparkles, Globe, User, MapPin, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ProgressHeader from "./ProgressHeader";
+import { useSirenSearch } from "@/hooks/api";
 
-// Mock company data for French companies
-const MOCK_COMPANIES = [
-  { siren: "798044129", name: "HELLOPRO", address: "5 AVENUE DE LA REPUBLIQUE, 75011 PARIS" },
-  { siren: "881308662", name: "HELLOPRINT B.V.", address: "SCHIEDAMSE VEST 89, 75011 PARIS" },
-  { siren: "949365415", name: "SCM HELLOPHYSIO", address: "2 BD DE CHINON, 37300 JOUE-LES-TOURS" },
-  { siren: "980682876", name: "HELLOPHONECOMMUNICATE", address: "5 RUE COUPLET, 89580 COULANGES-LA-VINEUSE" },
-  { siren: "941377442", name: "HELLOPHONE", address: "49 RUE DE PONTHIEU, 75008 PARIS" },
-  { siren: "902336692", name: "HELLOPREV", address: "9 RUE DE CONDE, 33000 BORDEAUX" },
-  { siren: "821238383", name: "HELLOPACK", address: "2 PLACE GAILLETON, 69002 LYON" },
-  { siren: "922266580", name: "HELLOPITAL", address: "20 RUE HENRI BARBUSSE, 59120 LOOS" },
-  { siren: "512345678", name: "GARAGE MARTIN", address: "15 RUE DE LA MÉCANIQUE, 69001 LYON" },
-  { siren: "523456789", name: "AUTO SERVICE PRO", address: "8 AVENUE DE L'INDUSTRIE, 75012 PARIS" },
-  { siren: "534567890", name: "ÉQUIPEMENT GARAGE SARL", address: "22 RUE DES ARTISANS, 33000 BORDEAUX" },
-  { siren: "545678901", name: "MÉCANIQUE GÉNÉRALE SA", address: "5 BOULEVARD INDUSTRIEL, 31000 TOULOUSE" },
-];
+// Plus de MOCK_COMPANIES - utilisation de l'API réelle
 
 // Mock cities with postal codes - format: { postalCode, city }
 const POSTAL_CODE_CITIES = [
@@ -70,41 +57,58 @@ const POSTAL_CODE_CITIES = [
   { postalCode: "91100", city: "Corbeil-Essonnes" },
 ];
 
-const COUNTRIES = [
-  "Afghanistan", "Afrique du Sud", "Albanie", "Algérie", "Allemagne", "Andorre", "Angola", 
-  "Antigua-et-Barbuda", "Arabie saoudite", "Argentine", "Arménie", "Australie", "Autriche", 
-  "Azerbaïdjan", "Bahamas", "Bahreïn", "Bangladesh", "Barbade", "Belgique", "Belize", "Bénin", 
-  "Bhoutan", "Biélorussie", "Birmanie", "Bolivie", "Bosnie-Herzégovine", "Botswana", "Brésil", 
-  "Brunei", "Bulgarie", "Burkina Faso", "Burundi", "Cambodge", "Cameroun", "Canada", "Cap-Vert", 
-  "Centrafrique", "Chili", "Chine", "Chypre", "Colombie", "Comores", "Corée du Nord", "Corée du Sud", 
-  "Costa Rica", "Côte d'Ivoire", "Croatie", "Cuba", "Danemark", "Djibouti", "Dominique", 
-  "Égypte", "Émirats arabes unis", "Équateur", "Érythrée", "Espagne", "Estonie", "Eswatini", 
-  "États-Unis", "Éthiopie", "Fidji", "Finlande", "Gabon", "Gambie", "Géorgie", "Ghana", "Grèce", 
-  "Grenade", "Guatemala", "Guinée", "Guinée équatoriale", "Guinée-Bissau", "Guyana", "Haïti", 
-  "Honduras", "Hongrie", "Inde", "Indonésie", "Irak", "Iran", "Irlande", "Islande", "Israël", 
-  "Italie", "Jamaïque", "Japon", "Jordanie", "Kazakhstan", "Kenya", "Kirghizistan", "Kiribati", 
-  "Koweït", "Laos", "Lesotho", "Lettonie", "Liban", "Liberia", "Libye", "Liechtenstein", 
-  "Lituanie", "Luxembourg", "Macédoine du Nord", "Madagascar", "Malaisie", "Malawi", "Maldives", 
-  "Mali", "Malte", "Maroc", "Maurice", "Mauritanie", "Mexique", "Micronésie", "Moldavie", 
-  "Monaco", "Mongolie", "Monténégro", "Mozambique", "Namibie", "Nauru", "Népal", "Nicaragua", 
-  "Niger", "Nigeria", "Norvège", "Nouvelle-Zélande", "Oman", "Ouganda", "Ouzbékistan", "Pakistan", 
-  "Palaos", "Palestine", "Panama", "Papouasie-Nouvelle-Guinée", "Paraguay", "Pays-Bas", "Pérou", 
-  "Philippines", "Pologne", "Portugal", "Qatar", "République dominicaine", "République tchèque", 
-  "Roumanie", "Royaume-Uni", "Russie", "Rwanda", "Saint-Kitts-et-Nevis", "Saint-Vincent-et-les-Grenadines", 
-  "Sainte-Lucie", "Salomon", "Salvador", "Samoa", "São Tomé-et-Príncipe", "Sénégal", "Serbie", 
-  "Seychelles", "Sierra Leone", "Singapour", "Slovaquie", "Slovénie", "Somalie", "Soudan", 
-  "Soudan du Sud", "Sri Lanka", "Suède", "Suisse", "Suriname", "Syrie", "Tadjikistan", "Tanzanie", 
-  "Tchad", "Thaïlande", "Timor oriental", "Togo", "Tonga", "Trinité-et-Tobago", "Tunisie", 
-  "Turkménistan", "Turquie", "Tuvalu", "Ukraine", "Uruguay", "Vanuatu", "Vatican", "Venezuela", 
+// Pays prioritaires (pays francophones et européens les plus courants)
+const PRIORITY_COUNTRIES = [
+  "Belgique",
+  "Suisse",
+  "Luxembourg",
+  "Canada",
+  "Maroc",
+  "Algérie",
+  "Tunisie",
+];
+
+// Tous les autres pays
+const OTHER_COUNTRIES = [
+  "Afghanistan", "Afrique du Sud", "Albanie", "Allemagne", "Andorre", "Angola",
+  "Antigua-et-Barbuda", "Arabie saoudite", "Argentine", "Arménie", "Australie", "Autriche",
+  "Azerbaïdjan", "Bahamas", "Bahreïn", "Bangladesh", "Barbade", "Belize", "Bénin",
+  "Bhoutan", "Biélorussie", "Birmanie", "Bolivie", "Bosnie-Herzégovine", "Botswana", "Brésil",
+  "Brunei", "Bulgarie", "Burkina Faso", "Burundi", "Cambodge", "Cameroun", "Cap-Vert",
+  "Centrafrique", "Chili", "Chine", "Chypre", "Colombie", "Comores", "Corée du Nord", "Corée du Sud",
+  "Costa Rica", "Côte d'Ivoire", "Croatie", "Cuba", "Danemark", "Djibouti", "Dominique",
+  "Égypte", "Émirats arabes unis", "Équateur", "Érythrée", "Espagne", "Estonie", "Eswatini",
+  "États-Unis", "Éthiopie", "Fidji", "Finlande", "Gabon", "Gambie", "Géorgie", "Ghana", "Grèce",
+  "Grenade", "Guatemala", "Guinée", "Guinée équatoriale", "Guinée-Bissau", "Guyana", "Haïti",
+  "Honduras", "Hongrie", "Inde", "Indonésie", "Irak", "Iran", "Irlande", "Islande", "Israël",
+  "Italie", "Jamaïque", "Japon", "Jordanie", "Kazakhstan", "Kenya", "Kirghizistan", "Kiribati",
+  "Koweït", "Laos", "Lesotho", "Lettonie", "Liban", "Liberia", "Libye", "Liechtenstein",
+  "Lituanie", "Macédoine du Nord", "Madagascar", "Malaisie", "Malawi", "Maldives",
+  "Mali", "Malte", "Maurice", "Mauritanie", "Mexique", "Micronésie", "Moldavie",
+  "Monaco", "Mongolie", "Monténégro", "Mozambique", "Namibie", "Nauru", "Népal", "Nicaragua",
+  "Niger", "Nigeria", "Norvège", "Nouvelle-Zélande", "Oman", "Ouganda", "Ouzbékistan", "Pakistan",
+  "Palaos", "Palestine", "Panama", "Papouasie-Nouvelle-Guinée", "Paraguay", "Pays-Bas", "Pérou",
+  "Philippines", "Pologne", "Portugal", "Qatar", "République dominicaine", "République tchèque",
+  "Roumanie", "Royaume-Uni", "Russie", "Rwanda", "Saint-Kitts-et-Nevis", "Saint-Vincent-et-les-Grenadines",
+  "Sainte-Lucie", "Salomon", "Salvador", "Samoa", "São Tomé-et-Príncipe", "Sénégal", "Serbie",
+  "Seychelles", "Sierra Leone", "Singapour", "Slovaquie", "Slovénie", "Somalie", "Soudan",
+  "Soudan du Sud", "Sri Lanka", "Suède", "Suriname", "Syrie", "Tadjikistan", "Tanzanie",
+  "Tchad", "Thaïlande", "Timor oriental", "Togo", "Tonga", "Trinité-et-Tobago",
+  "Turkménistan", "Turquie", "Tuvalu", "Ukraine", "Uruguay", "Vanuatu", "Vatican", "Venezuela",
   "Viêt Nam", "Yémen", "Zambie", "Zimbabwe"
 ];
+
+// Liste complète avec pays prioritaires en premier, séparateur, puis autres pays
+const COUNTRIES = [...PRIORITY_COUNTRIES, "---", ...OTHER_COUNTRIES];
 
 type ProfileType = "pro_france" | "creation" | "pro_foreign" | "particulier" | null;
 
 interface CompanyResult {
   siren: string;
-  name: string;
+  companyName: string;
   address: string;
+  postalCode: string;
+  city: string;
 }
 
 interface ProfileData {
@@ -144,6 +148,12 @@ const ProfileTypeStep = ({ onComplete, onBack }: ProfileTypeStepProps) => {
   const [manualCity, setManualCity] = useState("");
   const [showManualPostalCodeSuggestions, setShowManualPostalCodeSuggestions] = useState(false);
 
+  // SIREN search via API
+  const { data: sirenResults, isLoading: sirenLoading } = useSirenSearch(
+    { query: searchQuery },
+    searchQuery.length >= 2 && !selectedCompany && !showManualCompanyForm
+  );
+
   // Filter postal code suggestions for manual company form
   const manualPostalCodeSuggestions = useMemo(() => {
     if (manualPostalCode.length < 2) return [];
@@ -160,16 +170,8 @@ const ProfileTypeStep = ({ onComplete, onBack }: ProfileTypeStepProps) => {
     ).slice(0, 8);
   }, [postalCode]);
 
-  // Filter companies based on search
-  const filteredCompanies = useMemo(() => {
-    if (!searchQuery.trim() || searchQuery.length < 2) return [];
-    const query = searchQuery.toLowerCase();
-    return MOCK_COMPANIES.filter(
-      (c) =>
-        c.name.toLowerCase().includes(query) ||
-        c.siren.includes(query)
-    ).slice(0, 10);
-  }, [searchQuery]);
+  // Companies come from API (sirenResults)
+  const filteredCompanies = sirenResults || [];
 
   // Filter countries based on search
   const filteredCountries = useMemo(() => {
@@ -229,7 +231,7 @@ const ProfileTypeStep = ({ onComplete, onBack }: ProfileTypeStepProps) => {
 
   const handleSelectCompany = (company: CompanyResult) => {
     setSelectedCompany(company);
-    setSearchQuery(company.name);
+    setSearchQuery(company.companyName);
   };
 
   return (
@@ -335,36 +337,43 @@ const ProfileTypeStep = ({ onComplete, onBack }: ProfileTypeStepProps) => {
                           <p className="text-sm text-center text-muted-foreground">
                             Sélectionnez votre structure si elle s'affiche :
                           </p>
-                          <button 
+                          <button
                             onClick={() => setShowManualCompanyForm(true)}
                             className="mx-auto block rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
                           >
                             Ma structure n'est pas dans la liste
                           </button>
-                          
-                          <div className="max-h-64 overflow-y-auto rounded-lg border border-border bg-card shadow-lg">
-                            {filteredCompanies.length > 0 ? (
-                              filteredCompanies.map((company, index) => (
-                                <button
-                                  key={company.siren}
-                                  onClick={() => handleSelectCompany(company)}
-                                  className={cn(
-                                    "w-full text-left px-4 py-3 hover:bg-muted transition-colors",
-                                    index !== filteredCompanies.length - 1 && "border-b border-border"
-                                  )}
-                                >
-                                  <div className="font-medium text-foreground">{company.name}</div>
-                                  <div className="text-sm text-muted-foreground">
-                                    SIREN : {company.siren} &nbsp;&nbsp; {company.address}
-                                  </div>
-                                </button>
-                              ))
-                            ) : (
-                              <div className="px-4 py-3 text-sm text-muted-foreground text-center bg-card">
-                                Aucune entreprise trouvée
-                              </div>
-                            )}
-                          </div>
+
+                          {sirenLoading ? (
+                            <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              Recherche en cours...
+                            </div>
+                          ) : (
+                            <div className="max-h-64 overflow-y-auto rounded-lg border border-border bg-card shadow-lg">
+                              {filteredCompanies.length > 0 ? (
+                                filteredCompanies.map((company, index) => (
+                                  <button
+                                    key={company.siren}
+                                    onClick={() => handleSelectCompany(company)}
+                                    className={cn(
+                                      "w-full text-left px-4 py-3 hover:bg-muted transition-colors",
+                                      index !== filteredCompanies.length - 1 && "border-b border-border"
+                                    )}
+                                  >
+                                    <div className="font-medium text-foreground">{company.companyName}</div>
+                                    <div className="text-sm text-muted-foreground">
+                                      SIREN : {company.siren} &nbsp;&nbsp; {company.address}, {company.postalCode} {company.city}
+                                    </div>
+                                  </button>
+                                ))
+                              ) : (
+                                <div className="px-4 py-3 text-sm text-muted-foreground text-center bg-card">
+                                  Aucune entreprise trouvée
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       )}
 
@@ -455,9 +464,9 @@ const ProfileTypeStep = ({ onComplete, onBack }: ProfileTypeStepProps) => {
 
                       {selectedCompany && (
                         <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3">
-                          <div className="font-medium text-foreground">{selectedCompany.name}</div>
+                          <div className="font-medium text-foreground">{selectedCompany.companyName}</div>
                           <div className="text-sm text-muted-foreground">
-                            SIREN : {selectedCompany.siren} &nbsp;&nbsp; {selectedCompany.address}
+                            SIREN : {selectedCompany.siren} &nbsp;&nbsp; {selectedCompany.address}, {selectedCompany.postalCode} {selectedCompany.city}
                           </div>
                         </div>
                       )}
@@ -628,19 +637,32 @@ const ProfileTypeStep = ({ onComplete, onBack }: ProfileTypeStepProps) => {
                                 />
                               </div>
                               <div className="max-h-48 overflow-y-auto">
-                                {filteredCountries.map((c) => (
-                                  <button
-                                    key={c}
-                                    onClick={() => {
-                                      setCountry(c);
-                                      setShowCountryDropdown(false);
-                                      setCountrySearch("");
-                                    }}
-                                    className="w-full text-left px-4 py-2 text-sm hover:bg-muted/50 transition-colors"
-                                  >
-                                    {c}
-                                  </button>
-                                ))}
+                                {filteredCountries.map((c) => {
+                                  // Séparateur entre pays prioritaires et autres pays
+                                  if (c === "---") {
+                                    return (
+                                      <div
+                                        key={c}
+                                        className="border-t border-border my-1"
+                                        aria-hidden="true"
+                                      />
+                                    );
+                                  }
+
+                                  return (
+                                    <button
+                                      key={c}
+                                      onClick={() => {
+                                        setCountry(c);
+                                        setShowCountryDropdown(false);
+                                        setCountrySearch("");
+                                      }}
+                                      className="w-full text-left px-4 py-2 text-sm hover:bg-muted/50 transition-colors"
+                                    >
+                                      {c}
+                                    </button>
+                                  );
+                                })}
                               </div>
                             </div>
                           )}

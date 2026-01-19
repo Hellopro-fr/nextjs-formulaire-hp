@@ -165,3 +165,8 @@ export const FLOW_STEPS: StepConfig[] = [
   { id: 2, label: "Sélection" },
   { id: 3, label: "Demande de devis" },
 ];
+
+// ========================================
+// DEMANDE D'INFORMATION TYPES
+// ========================================
+export * from './demande';
