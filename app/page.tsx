@@ -31,9 +31,7 @@ export default async function Home() {
   //   );
   // }
 
-  return(
-    // <AppProvider idCategorie={idCategorie}>
-      <QuestionnaireClient />
-    {/* </AppProvider> */}
+  return(    
+      <QuestionnaireClient />    
   );
 }
