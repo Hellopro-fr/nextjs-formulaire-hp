@@ -8,13 +8,10 @@ import type {
   DemandeInfoPHPPayload,
   ProduitSelection,
 } from '@/types/demande';
+import { basePath } from '@/lib/utils';
 
-/**
- * URL du endpoint PHP pour l'insertion des demandes
- * À configurer selon l'environnement
- */
-const DEMANDE_INFO_ENDPOINT = process.env.NEXT_PUBLIC_DEMANDE_INFO_URL
-  || 'https://dev-www.hellopro.fr/include/demande_information/demande_info_insertion.php';
+// Utilise le proxy Next.js pour éviter les problèmes CORS
+const getApiBasePath = () => basePath || '';
 
 /**
  * Convertit les données du formulaire Next.js vers le format PHP attendu
@@ -126,7 +123,7 @@ async function envoyerDemandeUnique(
   const phpPayload = formatPayloadForPHP(payload, produit);
 
   try {
-    const response = await fetch('/api/demande-info', {
+    const response = await fetch(`${getApiBasePath()}/api/demande-info`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

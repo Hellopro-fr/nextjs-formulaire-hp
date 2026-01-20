@@ -2,18 +2,7 @@
 
 import { Check, CheckCircle, AlertTriangle, ShieldCheck, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-interface ProductSpec {
-  label: string;
-  value: string;
-  matches?: boolean;
-  expected?: string;
-}
-
-interface PriceInfo {
-  amount?: number;
-  isStartingFrom?: boolean;
-}
+import type { ProductSpec, PriceInfo } from "@/types";
 
 interface SupplierCardProps {
   id: string;

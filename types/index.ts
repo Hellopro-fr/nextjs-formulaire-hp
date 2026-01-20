@@ -56,17 +56,30 @@ export interface ProductSpec {
   value: string;
   matches?: boolean;
   expected?: string;
+  isRequested?: boolean;
+}
+
+export interface MediaItem {
+  type: "image" | "video";
+  url: string;
+  thumbnail?: string;
+}
+
+export interface PriceInfo {
+  amount?: number;
+  isStartingFrom?: boolean;
 }
 
 export interface SupplierInfo {
   name: string;
   description: string;
   location: string;
-  rating: number;
-  reviewCount: number;
   responseTime: string;
-  yearsActive: number;
-  certifications: string[];
+  logo?: string;
+  rating?: number;
+  reviewCount?: number;
+  yearsActive?: number;
+  certifications?: string[];
 }
 
 export interface Supplier {
@@ -78,12 +91,15 @@ export interface Supplier {
   matchScore: number;
   image: string;
   images: string[];
+  media?: MediaItem[];
   isRecommended: boolean;
   isCertified?: boolean;
   matchGaps: string[];
   description: string;
+  descriptionHtml?: string;
   specs: ProductSpec[];
   supplier: SupplierInfo;
+  price?: PriceInfo;
 }
 
 // ========================================

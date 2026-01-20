@@ -1,9 +1,9 @@
 'use client';
 
 import { Check, X, Phone } from "lucide-react";
-import { cn } from "@/lib/utils";
-const hpLogo = "/images/hp-logo.svg";
-const expertPhoto = "/images/expert-patrick.jpg";
+import { cn, getAssetPath } from "@/lib/utils";
+const hpLogo = getAssetPath("/images/hp-logo.svg");
+const expertPhoto = getAssetPath("/images/expert-patrick.jpg");
 
 interface Step {
   id: number;

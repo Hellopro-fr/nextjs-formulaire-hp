@@ -2,6 +2,13 @@
 const nextConfig = {
   reactStrictMode: true,
 
+  // Build standalone pour Docker
+  output: 'standalone',
+
+  // URL de base pour le proxy Apache
+  basePath: '/formulaire',
+  assetPrefix: '/formulaire',
+
   // Configuration des images
   images: {
     remotePatterns: [

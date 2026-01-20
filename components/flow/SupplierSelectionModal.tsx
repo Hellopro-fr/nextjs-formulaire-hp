@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { ChevronDown, ChevronUp, RotateCcw, ArrowLeft, Send, Search, LayoutGrid, List, ThumbsUp, ThumbsDown } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, getAssetPath } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { useFlowStore } from "@/lib/stores/flow-store";
 import ProgressHeader from "./ProgressHeader";
@@ -16,65 +16,19 @@ import ProductDetailModal from "./ProductDetailModal";
 import ProductComparisonModal from "./ProductComparisonModal";
 import CriteriaChangedBanner from "./CriteriaChangedBanner";
 import { trackComparisonModalView } from "@/lib/analytics";
+import type { Supplier } from "@/types";
 
-const productLift1 = "/images/product-lift-1.jpg";
-const productLift2 = "/images/product-lift-2.jpg";
-const productLift3 = "/images/product-lift-3.jpg";
-const productLift4 = "/images/product-lift-4.jpg";
-const productLift5 = "/images/product-lift-5.jpg";
-const productLift6 = "/images/product-lift-6.jpg";
-const productLift7 = "/images/product-lift-7.jpg";
+const productLift1 = getAssetPath("/images/product-lift-1.jpg");
+const productLift2 = getAssetPath("/images/product-lift-2.jpg");
+const productLift3 = getAssetPath("/images/product-lift-3.jpg");
+const productLift4 = getAssetPath("/images/product-lift-4.jpg");
+const productLift5 = getAssetPath("/images/product-lift-5.jpg");
+const productLift6 = getAssetPath("/images/product-lift-6.jpg");
+const productLift7 = getAssetPath("/images/product-lift-7.jpg");
 
-const logoProvac = "/images/logo-provac.webp";
-const logoNussbaum = "/images/logo-nussbaum.png";
-const logoRavaglioli = "/images/logo-ravaglioli.jpg";
-
-interface ProductSpec {
-  label: string;
-  value: string;
-  matches?: boolean;
-  expected?: string;
-  isRequested?: boolean;
-}
-
-interface SupplierInfo {
-  name: string;
-  description: string;
-  location: string;
-  responseTime: string;
-  logo?: string;
-}
-
-interface MediaItem {
-  type: "image" | "video";
-  url: string;
-  thumbnail?: string;
-}
-
-interface PriceInfo {
-  amount?: number;
-  isStartingFrom?: boolean;
-}
-
-interface Supplier {
-  id: string;
-  productName: string;
-  supplierName: string;
-  rating: number;
-  distance: number;
-  matchScore: number;
-  image: string;
-  images: string[];
-  media?: MediaItem[];
-  isRecommended: boolean;
-  isCertified?: boolean;
-  matchGaps: string[];
-  description: string;
-  descriptionHtml?: string;
-  specs: ProductSpec[];
-  supplier: SupplierInfo;
-  price?: PriceInfo;
-}
+const logoProvac = getAssetPath("/images/logo-provac.webp");
+const logoNussbaum = getAssetPath("/images/logo-nussbaum.png");
+const logoRavaglioli = getAssetPath("/images/logo-ravaglioli.jpg");
 
 type ViewState = "selection" | "contact" | "modify-criteria" | "custom-need";
 
@@ -895,16 +849,7 @@ const SupplierSelectionModal = ({ userAnswers, onBackToQuestionnaire }: Supplier
       {/* Comparison Modal */}
       {showComparison && (
         <ProductComparisonModal
-          products={ALL_SUPPLIERS.map((s) => ({
-            id: s.id,
-            productName: s.productName,
-            supplierName: s.supplierName,
-            image: s.image,
-            matchScore: s.matchScore,
-            distance: s.distance,
-            specs: s.specs,
-            isCertified: s.isCertified,
-          }))}
+          products={ALL_SUPPLIERS}
           selectedIds={selectedIds}
           onToggle={toggleSupplier}
           onClose={() => setShowComparison(false)}

@@ -1,23 +1,9 @@
 import type { ApiResponse } from '../types';
+import { basePath } from '@/lib/utils';
 
-// Détecte automatiquement si on peut appeler directement hellopro.fr ou utiliser un proxy
-const getBaseUrl = () => {
-  if (typeof window !== 'undefined') {
-    const hostname = window.location.hostname;
-
-    // Dev local: utilise le proxy Next.js
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      return '';
-    }
-
-    // Prod sur hellopro.fr ou ses sous-domaines: appel direct (pas de CORS)
-    if (hostname === 'hellopro.fr' || hostname.endsWith('.hellopro.fr')) {
-      return 'https://www.hellopro.fr';
-    }
-  }
-
-  // Autres cas (domaine différent): utilise le proxy Next.js
-  return '';
+// Toujours utiliser le proxy Next.js pour éviter les problèmes CORS
+const getApiBasePath = () => {
+  return basePath || '';
 };
 
 export interface BuyerCheckParams {
@@ -59,10 +45,9 @@ export async function checkBuyerExists(
       formData.append('url_page', encodeURIComponent(params.urlPage));
     }
 
-    const baseUrl = getBaseUrl();
-    const apiUrl = baseUrl
-      ? `${baseUrl}/annuaire_hp/ajax/demande_information/verif_doublon_di.php`
-      : '/api/buyer/check'; // Proxy Next.js en dev
+    // Toujours utiliser le proxy Next.js pour éviter CORS
+    const apiBase = getApiBasePath();
+    const apiUrl = `${apiBase}/api/buyer/check`;
 
     const response = await fetch(apiUrl, {
       method: 'POST',

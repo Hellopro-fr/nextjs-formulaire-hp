@@ -1,23 +1,10 @@
 import type { ApiResponse } from '../types';
+import { basePath } from '@/lib/utils';
 
-// Détecte automatiquement si on peut appeler directement hellopro.fr ou utiliser un proxy
-const getBaseUrl = () => {
-  if (typeof window !== 'undefined') {
-    const hostname = window.location.hostname;
-
-    // Dev local: utilise le proxy Next.js
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      return '';
-    }
-
-    // Prod sur hellopro.fr ou ses sous-domaines: appel direct (pas de CORS)
-    if (hostname === 'hellopro.fr' || hostname.endsWith('.hellopro.fr')) {
-      return 'https://www.hellopro.fr';
-    }
-  }
-
-  // Autres cas (domaine différent): utilise le proxy Next.js
-  return '';
+// Toujours utiliser le proxy Next.js pour éviter les problèmes CORS
+// Le proxy côté serveur fait l'appel à hellopro.fr sans restriction CORS
+const getApiBasePath = () => {
+  return basePath || '';
 };
 
 export interface SirenCompanyData {
@@ -97,21 +84,11 @@ export async function searchCompanyBySiren(
       };
     }
 
-    // Construction URL avec paramètres GET
-    const baseUrl = getBaseUrl();
-    let url: URL;
-
-    if (baseUrl) {
-      // Prod: appel direct à hellopro.fr (API v2)
-      url = new URL(`${baseUrl}/api_insee/_ag_web_service_insee_v2.php`);
-      url.searchParams.append('soc', params.query.trim());
-      url.searchParams.append('p', 'demande_information_v2');
-    } else {
-      // Dev: utilise le proxy Next.js
-      url = new URL('/api/siren/search', window.location.origin);
-      url.searchParams.append('soc', params.query.trim());
-      url.searchParams.append('p', 'demande_information_v2');
-    }
+    // Construction URL - toujours utiliser le proxy Next.js pour éviter CORS
+    const apiBase = getApiBasePath();
+    const url = new URL(`${apiBase}/api/siren/search`, window.location.origin);
+    url.searchParams.append('soc', params.query.trim());
+    url.searchParams.append('p', 'demande_information_v2');
 
     const response = await fetch(url.toString(), {
       method: 'GET',

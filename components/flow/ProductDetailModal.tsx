@@ -5,32 +5,7 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { trackProductModalView } from "@/lib/analytics";
-
-interface ProductSpec {
-  label: string;
-  value: string;
-  matches?: boolean;
-  expected?: string;
-  isRequested?: boolean;
-}
-
-interface SupplierInfo {
-  name: string;
-  description: string;
-  location: string;
-  responseTime: string;
-  logo?: string;
-  rating: number;
-  reviewCount: number;
-  yearsActive: number;
-  certifications: string[];
-}
-
-interface MediaItem {
-  type: "image" | "video";
-  url: string;
-  thumbnail?: string;
-}
+import type { ProductSpec, SupplierInfo, MediaItem } from "@/types";
 
 interface ProductDetailProps {
   product: {
