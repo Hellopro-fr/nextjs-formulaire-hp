@@ -134,6 +134,10 @@ const ProfileTypeStep = ({ onComplete, onBack }: ProfileTypeStepProps) => {
   const [manualPostalCode, setManualPostalCode] = useState("");
   const [manualCity, setManualCity] = useState("");
   const [showManualPostalCodeSuggestions, setShowManualPostalCodeSuggestions] = useState(false);
+  // Pour particulier - sélection du pays
+  const [particulierCountry, setParticulierCountry] = useState("France");
+  const [showParticulierCountryDropdown, setShowParticulierCountryDropdown] = useState(false);
+  const [particulierCountrySearch, setParticulierCountrySearch] = useState("");
 
   // SIREN search via API
   const { data: sirenResults, isLoading: sirenLoading } = useSirenSearch(
@@ -168,6 +172,14 @@ const ProfileTypeStep = ({ onComplete, onBack }: ProfileTypeStepProps) => {
     );
   }, [countrySearch]);
 
+  // Filter countries based on search for particulier
+  const filteredParticulierCountries = useMemo(() => {
+    if (!particulierCountrySearch.trim()) return COUNTRIES;
+    return COUNTRIES.filter((c) =>
+      c.toLowerCase().includes(particulierCountrySearch.toLowerCase())
+    );
+  }, [particulierCountrySearch]);
+
   // Check if form is valid
   const isValid = useMemo(() => {
     switch (selectedType) {
@@ -181,11 +193,15 @@ const ProfileTypeStep = ({ onComplete, onBack }: ProfileTypeStepProps) => {
       case "pro_foreign":
         return companyName.trim().length > 0 && country.trim().length > 0;
       case "particulier":
-        return postalCode.trim().length >= 5 && city.trim().length > 0;
+        // Si France, require code postal et ville; sinon juste le pays
+        if (particulierCountry === "France") {
+          return postalCode.trim().length >= 5 && city.trim().length > 0;
+        }
+        return particulierCountry.trim().length > 0;
       default:
         return false;
     }
-  }, [selectedType, selectedCompany, postalCode, city, companyName, country, showManualCompanyForm, manualCompanyName, manualPostalCode, manualCity]);
+  }, [selectedType, selectedCompany, postalCode, city, companyName, country, showManualCompanyForm, manualCompanyName, manualPostalCode, manualCity, particulierCountry]);
 
   const handleNext = () => {
     if (!isValid) return;
@@ -203,9 +219,15 @@ const ProfileTypeStep = ({ onComplete, onBack }: ProfileTypeStepProps) => {
         }
         break;
       case "creation":
-      case "particulier":
         data.postalCode = postalCode;
         data.city = city;
+        break;
+      case "particulier":
+        data.country = particulierCountry;
+        if (particulierCountry === "France") {
+          data.postalCode = postalCode;
+          data.city = city;
+        }
         break;
       case "pro_foreign":
         data.companyName = companyName;
@@ -706,57 +728,120 @@ const ProfileTypeStep = ({ onComplete, onBack }: ProfileTypeStepProps) => {
                   {selectedType === "particulier" && (
                     <div className="mt-4 ml-8 space-y-3">
                       <p className="text-sm text-muted-foreground">Merci de renseigner votre localisation</p>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="relative">
-                          <label className="text-sm text-muted-foreground">Code postal</label>
-                          <input
-                            type="text"
-                            value={postalCode}
-                            onChange={(e) => {
-                              const newPostalCode = e.target.value.replace(/\D/g, "").slice(0, 5);
-                              setPostalCode(newPostalCode);
-                              setCity("");
-                              setShowPostalCodeSuggestions(newPostalCode.length >= 2);
-                            }}
-                            onFocus={() => postalCode.length >= 2 && setShowPostalCodeSuggestions(true)}
-                            placeholder="75001"
-                            className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                          />
-                          
-                          {showPostalCodeSuggestions && postalCodeSuggestions.length > 0 && !city && (
-                            <div className="absolute z-50 mt-1 w-[calc(200%+0.75rem)] rounded-lg border border-border bg-card shadow-lg max-h-48 overflow-y-auto">
-                              {postalCodeSuggestions.map((item, index) => (
+
+                      {/* Country selector */}
+                      <div className="relative">
+                        <label className="text-sm text-muted-foreground">Pays</label>
+                        <button
+                          onClick={() => setShowParticulierCountryDropdown(!showParticulierCountryDropdown)}
+                          className="mt-1 w-full flex items-center justify-between rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-left focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                        >
+                          <span className="text-foreground">{particulierCountry}</span>
+                          <ArrowRight className="h-4 w-4 text-muted-foreground rotate-90" />
+                        </button>
+
+                        {showParticulierCountryDropdown && (
+                          <div className="absolute z-50 mt-1 w-full rounded-lg border border-border bg-background shadow-lg">
+                            <div className="p-2 border-b border-border">
+                              <input
+                                type="text"
+                                value={particulierCountrySearch}
+                                onChange={(e) => setParticulierCountrySearch(e.target.value)}
+                                placeholder="Rechercher..."
+                                className="w-full rounded-md border border-border bg-muted/30 px-3 py-2 text-sm focus:outline-none focus:border-primary"
+                                autoFocus
+                              />
+                            </div>
+                            <div className="max-h-48 overflow-y-auto">
+                              {/* France always first */}
+                              <button
+                                onClick={() => {
+                                  setParticulierCountry("France");
+                                  setShowParticulierCountryDropdown(false);
+                                  setParticulierCountrySearch("");
+                                }}
+                                className={cn(
+                                  "w-full text-left px-4 py-2 text-sm hover:bg-muted/50 transition-colors",
+                                  particulierCountry === "France" && "bg-primary/10 font-medium"
+                                )}
+                              >
+                                France
+                              </button>
+                              {filteredParticulierCountries.filter(c => c !== "France" && c !== "---").map((c) => (
                                 <button
-                                  key={`${item.postalCode}-${item.city}-${index}`}
+                                  key={c}
                                   onClick={() => {
-                                    setPostalCode(item.postalCode);
-                                    setCity(item.city);
-                                    setShowPostalCodeSuggestions(false);
+                                    setParticulierCountry(c);
+                                    setShowParticulierCountryDropdown(false);
+                                    setParticulierCountrySearch("");
+                                    // Clear postal code and city when changing country
+                                    setPostalCode("");
+                                    setCity("");
                                   }}
-                                  className={cn(
-                                    "w-full text-left px-4 py-2.5 text-sm hover:bg-muted transition-colors",
-                                    index === 0 && "rounded-t-lg",
-                                    index === postalCodeSuggestions.length - 1 && "rounded-b-lg"
-                                  )}
+                                  className="w-full text-left px-4 py-2 text-sm hover:bg-muted/50 transition-colors"
                                 >
-                                  <span className="font-medium">{item.postalCode}</span>
-                                  <span className="text-muted-foreground"> — {item.city}</span>
+                                  {c}
                                 </button>
                               ))}
                             </div>
-                          )}
-                        </div>
-                        <div>
-                          <label className="text-sm text-muted-foreground">Ville</label>
-                          <input
-                            type="text"
-                            value={city}
-                            onChange={(e) => setCity(e.target.value)}
-                            placeholder="Ville"
-                            className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                          />
-                        </div>
+                          </div>
+                        )}
                       </div>
+
+                      {/* Postal code and city - only shown if France */}
+                      {particulierCountry === "France" && (
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="relative">
+                            <label className="text-sm text-muted-foreground">Code postal</label>
+                            <input
+                              type="text"
+                              value={postalCode}
+                              onChange={(e) => {
+                                const newPostalCode = e.target.value.replace(/\D/g, "").slice(0, 5);
+                                setPostalCode(newPostalCode);
+                                setCity("");
+                                setShowPostalCodeSuggestions(newPostalCode.length >= 2);
+                              }}
+                              onFocus={() => postalCode.length >= 2 && setShowPostalCodeSuggestions(true)}
+                              placeholder="75001"
+                              className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                            />
+
+                            {showPostalCodeSuggestions && postalCodeSuggestions.length > 0 && !city && (
+                              <div className="absolute z-50 mt-1 w-[calc(200%+0.75rem)] rounded-lg border border-border bg-card shadow-lg max-h-48 overflow-y-auto">
+                                {postalCodeSuggestions.map((item, index) => (
+                                  <button
+                                    key={`particulier-${item.postalCode}-${item.city}-${index}`}
+                                    onClick={() => {
+                                      setPostalCode(item.postalCode);
+                                      setCity(item.city);
+                                      setShowPostalCodeSuggestions(false);
+                                    }}
+                                    className={cn(
+                                      "w-full text-left px-4 py-2.5 text-sm hover:bg-muted transition-colors",
+                                      index === 0 && "rounded-t-lg",
+                                      index === postalCodeSuggestions.length - 1 && "rounded-b-lg"
+                                    )}
+                                  >
+                                    <span className="font-medium">{item.postalCode}</span>
+                                    <span className="text-muted-foreground"> — {item.city}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <label className="text-sm text-muted-foreground">Ville</label>
+                            <input
+                              type="text"
+                              value={city}
+                              onChange={(e) => setCity(e.target.value)}
+                              placeholder="Ville"
+                              className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
