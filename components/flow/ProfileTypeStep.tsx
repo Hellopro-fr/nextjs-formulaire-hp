@@ -5,106 +5,15 @@ import { ArrowLeft, ArrowRight, Search, Building2, Sparkles, Globe, User, MapPin
 import { cn } from "@/lib/utils";
 import ProgressHeader from "./ProgressHeader";
 import { useSirenSearch } from "@/hooks/api";
+import { usePostalCodeSearch } from "@/hooks/usePostalCodeSearch";
 import { useFlowStore } from "@/lib/stores/flow-store";
 import type { ProfileType, CompanyResult, ProfileData } from "@/types";
 import type { SirenCompanyData } from "@/lib/api/services/siret.service";
 
-// Plus de MOCK_COMPANIES - utilisation de l'API réelle
-
-// Mock cities with postal codes - format: { postalCode, city }
-const POSTAL_CODE_CITIES = [
-  { postalCode: "75001", city: "Paris 1er" },
-  { postalCode: "75002", city: "Paris 2e" },
-  { postalCode: "75003", city: "Paris 3e" },
-  { postalCode: "75004", city: "Paris 4e" },
-  { postalCode: "75005", city: "Paris 5e" },
-  { postalCode: "75006", city: "Paris 6e" },
-  { postalCode: "75007", city: "Paris 7e" },
-  { postalCode: "75008", city: "Paris 8e" },
-  { postalCode: "75009", city: "Paris 9e" },
-  { postalCode: "75010", city: "Paris 10e" },
-  { postalCode: "75011", city: "Paris 11e" },
-  { postalCode: "75012", city: "Paris 12e" },
-  { postalCode: "69001", city: "Lyon 1er" },
-  { postalCode: "69002", city: "Lyon 2e" },
-  { postalCode: "69003", city: "Lyon 3e" },
-  { postalCode: "69100", city: "Villeurbanne" },
-  { postalCode: "33000", city: "Bordeaux" },
-  { postalCode: "33100", city: "Bordeaux" },
-  { postalCode: "33200", city: "Bordeaux-Caudéran" },
-  { postalCode: "31000", city: "Toulouse" },
-  { postalCode: "31100", city: "Toulouse" },
-  { postalCode: "31200", city: "Toulouse" },
-  { postalCode: "13001", city: "Marseille 1er" },
-  { postalCode: "13002", city: "Marseille 2e" },
-  { postalCode: "13003", city: "Marseille 3e" },
-  { postalCode: "44000", city: "Nantes" },
-  { postalCode: "44100", city: "Nantes" },
-  { postalCode: "44200", city: "Nantes" },
-  { postalCode: "59000", city: "Lille" },
-  { postalCode: "59120", city: "Loos" },
-  { postalCode: "59800", city: "Lille" },
-  { postalCode: "37300", city: "Joué-lès-Tours" },
-  { postalCode: "89580", city: "Coulanges-la-Vineuse" },
-  { postalCode: "92000", city: "Nanterre" },
-  { postalCode: "92100", city: "Boulogne-Billancourt" },
-  { postalCode: "92200", city: "Neuilly-sur-Seine" },
-  { postalCode: "94000", city: "Créteil" },
-  { postalCode: "94100", city: "Saint-Maur-des-Fossés" },
-  { postalCode: "78000", city: "Versailles" },
-  { postalCode: "78100", city: "Saint-Germain-en-Laye" },
-  { postalCode: "77100", city: "Meaux" },
-  { postalCode: "45000", city: "Orléans" },
-  { postalCode: "28000", city: "Chartres" },
-  { postalCode: "91000", city: "Évry-Courcouronnes" },
-  { postalCode: "91100", city: "Corbeil-Essonnes" },
-];
-
-// Pays prioritaires (pays francophones et européens les plus courants)
-const PRIORITY_COUNTRIES = [
-  "Belgique",
-  "Suisse",
-  "Luxembourg",
-  "Canada",
-  "Maroc",
-  "Algérie",
-  "Tunisie",
-];
-
-// Tous les autres pays
-const OTHER_COUNTRIES = [
-  "Afghanistan", "Afrique du Sud", "Albanie", "Allemagne", "Andorre", "Angola",
-  "Antigua-et-Barbuda", "Arabie saoudite", "Argentine", "Arménie", "Australie", "Autriche",
-  "Azerbaïdjan", "Bahamas", "Bahreïn", "Bangladesh", "Barbade", "Belize", "Bénin",
-  "Bhoutan", "Biélorussie", "Birmanie", "Bolivie", "Bosnie-Herzégovine", "Botswana", "Brésil",
-  "Brunei", "Bulgarie", "Burkina Faso", "Burundi", "Cambodge", "Cameroun", "Cap-Vert",
-  "Centrafrique", "Chili", "Chine", "Chypre", "Colombie", "Comores", "Corée du Nord", "Corée du Sud",
-  "Costa Rica", "Côte d'Ivoire", "Croatie", "Cuba", "Danemark", "Djibouti", "Dominique",
-  "Égypte", "Émirats arabes unis", "Équateur", "Érythrée", "Espagne", "Estonie", "Eswatini",
-  "États-Unis", "Éthiopie", "Fidji", "Finlande", "Gabon", "Gambie", "Géorgie", "Ghana", "Grèce",
-  "Grenade", "Guatemala", "Guinée", "Guinée équatoriale", "Guinée-Bissau", "Guyana", "Haïti",
-  "Honduras", "Hongrie", "Inde", "Indonésie", "Irak", "Iran", "Irlande", "Islande", "Israël",
-  "Italie", "Jamaïque", "Japon", "Jordanie", "Kazakhstan", "Kenya", "Kirghizistan", "Kiribati",
-  "Koweït", "Laos", "Lesotho", "Lettonie", "Liban", "Liberia", "Libye", "Liechtenstein",
-  "Lituanie", "Macédoine du Nord", "Madagascar", "Malaisie", "Malawi", "Maldives",
-  "Mali", "Malte", "Maurice", "Mauritanie", "Mexique", "Micronésie", "Moldavie",
-  "Monaco", "Mongolie", "Monténégro", "Mozambique", "Namibie", "Nauru", "Népal", "Nicaragua",
-  "Niger", "Nigeria", "Norvège", "Nouvelle-Zélande", "Oman", "Ouganda", "Ouzbékistan", "Pakistan",
-  "Palaos", "Palestine", "Panama", "Papouasie-Nouvelle-Guinée", "Paraguay", "Pays-Bas", "Pérou",
-  "Philippines", "Pologne", "Portugal", "Qatar", "République dominicaine", "République tchèque",
-  "Roumanie", "Royaume-Uni", "Russie", "Rwanda", "Saint-Kitts-et-Nevis", "Saint-Vincent-et-les-Grenadines",
-  "Sainte-Lucie", "Salomon", "Salvador", "Samoa", "São Tomé-et-Príncipe", "Sénégal", "Serbie",
-  "Seychelles", "Sierra Leone", "Singapour", "Slovaquie", "Slovénie", "Somalie", "Soudan",
-  "Soudan du Sud", "Sri Lanka", "Suède", "Suriname", "Syrie", "Tadjikistan", "Tanzanie",
-  "Tchad", "Thaïlande", "Timor oriental", "Togo", "Tonga", "Trinité-et-Tobago",
-  "Turkménistan", "Turquie", "Tuvalu", "Ukraine", "Uruguay", "Vanuatu", "Vatican", "Venezuela",
-  "Viêt Nam", "Yémen", "Zambie", "Zimbabwe"
-];
-
-// Liste complète avec pays prioritaires en premier, séparateur, puis autres pays
-const COUNTRIES = [...PRIORITY_COUNTRIES, "---", ...OTHER_COUNTRIES];
 
 interface ProfileTypeStepProps {
+  priorityCountries: [];
+  otherCountries: [];
   onComplete: (data: ProfileData) => void;
   onBack: () => void;
 }
@@ -115,7 +24,7 @@ const STEPS = [
   { id: 3, label: "Demande de devis" },
 ];
 
-const ProfileTypeStep = ({ onComplete, onBack }: ProfileTypeStepProps) => {
+const ProfileTypeStep = ({ priorityCountries, otherCountries, onComplete, onBack }: ProfileTypeStepProps) => {
   // Store Zustand pour persistance dans sessionStorage
   const { setProfileData } = useFlowStore();
 
@@ -125,10 +34,13 @@ const ProfileTypeStep = ({ onComplete, onBack }: ProfileTypeStepProps) => {
   const [companyName, setCompanyName] = useState("");
   const [postalCode, setPostalCode] = useState("");
   const [city, setCity] = useState("");
+  const [particulierCity, setParticulierCity] = useState("");
   const [country, setCountry] = useState("");
+  const [countryID, setCountryID] = useState(0);
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
   const [countrySearch, setCountrySearch] = useState("");
   const [showPostalCodeSuggestions, setShowPostalCodeSuggestions] = useState(false);
+  const [particulierShowPostalCodeSuggestions, setShowParticulierPostalCodeSuggestions] = useState(false);
   const [showManualCompanyForm, setShowManualCompanyForm] = useState(false);
   const [manualCompanyName, setManualCompanyName] = useState("");
   const [manualPostalCode, setManualPostalCode] = useState("");
@@ -136,8 +48,11 @@ const ProfileTypeStep = ({ onComplete, onBack }: ProfileTypeStepProps) => {
   const [showManualPostalCodeSuggestions, setShowManualPostalCodeSuggestions] = useState(false);
   // Pour particulier - sélection du pays
   const [particulierCountry, setParticulierCountry] = useState("France");
+  const [particulierCountryID, setParticulierCountryID] = useState(0);
   const [showParticulierCountryDropdown, setShowParticulierCountryDropdown] = useState(false);
   const [particulierCountrySearch, setParticulierCountrySearch] = useState("");
+  const [particulierPostalCode, setParticulierPostalCode] = useState("");
+
 
   // SIREN search via API
   const { data: sirenResults, isLoading: sirenLoading } = useSirenSearch(
@@ -145,21 +60,59 @@ const ProfileTypeStep = ({ onComplete, onBack }: ProfileTypeStepProps) => {
     searchQuery.length >= 2 && !selectedCompany && !showManualCompanyForm
   );
 
-  // Filter postal code suggestions for manual company form
-  const manualPostalCodeSuggestions = useMemo(() => {
-    if (manualPostalCode.length < 2) return [];
-    return POSTAL_CODE_CITIES.filter((item) =>
-      item.postalCode.startsWith(manualPostalCode)
-    ).slice(0, 8);
-  }, [manualPostalCode]);
+  // Postal code search for "creation" section
+  const {
+    data: postalCodeResults,
+    isLoading: postalCodeLoading
+  } = usePostalCodeSearch({
+    query: postalCode,
+    enabled: postalCode.length >= 3 && !city && selectedType === "creation",
+  });
 
-  // Filter postal code suggestions based on input
+  // Postal code search for manual company form
+  const {
+    data: manualPostalCodeResults,
+    isLoading: manualPostalCodeLoading
+  } = usePostalCodeSearch({
+    query: manualPostalCode,
+    enabled: manualPostalCode.length >= 3 && !manualCity && showManualCompanyForm,
+  });
+
+  // Postal code search for particulier section
+  const {
+    data: particulierPostalCodeResults,
+    isLoading: particulierPostalCodeLoading
+  } = usePostalCodeSearch({
+    query: particulierPostalCode,
+    enabled: particulierCountry === "France" && postalCode.length >= 3 && !city && selectedType === "particulier",
+  });
+
+  console.log("Priority countries:", priorityCountries);
+  console.log("Other countries:", otherCountries);
+
+  const COUNTRIES = useMemo(() => {
+    const priorityCountryIds = new Set(priorityCountries.map((c) => c.libelle));
+    console.log(priorityCountryIds);
+    const filteredOtherCountries = otherCountries.filter(
+      function(c){
+        return !priorityCountryIds.has(c.libelle);
+      }
+    );
+    return [...priorityCountries, "---", ...filteredOtherCountries];
+  }, [priorityCountries, otherCountries]);
+
+  // Remplacer les suggestions de code postal par les résultats de l'API
   const postalCodeSuggestions = useMemo(() => {
-    if (postalCode.length < 2) return [];
-    return POSTAL_CODE_CITIES.filter((item) =>
-      item.postalCode.startsWith(postalCode)
-    ).slice(0, 8);
-  }, [postalCode]);
+    return postalCodeResults.slice(0, 8);
+  }, [postalCodeResults]);
+
+  const manualPostalCodeSuggestions = useMemo(() => {
+    return manualPostalCodeResults.slice(0, 8);
+  }, [manualPostalCodeResults]);
+
+  const particulierPostalCodeSuggestions = useMemo(() => {
+    return particulierPostalCodeResults.slice(0, 8);
+  }, [particulierPostalCodeResults]);
 
   // Companies come from API (sirenResults)
   const filteredCompanies: SirenCompanyData[] = sirenResults || [];
@@ -168,7 +121,7 @@ const ProfileTypeStep = ({ onComplete, onBack }: ProfileTypeStepProps) => {
   const filteredCountries = useMemo(() => {
     if (!countrySearch.trim()) return COUNTRIES;
     return COUNTRIES.filter((c) =>
-      c.toLowerCase().includes(countrySearch.toLowerCase())
+      c !== "---" && c.libelle.toLowerCase().includes(countrySearch.toLowerCase())
     );
   }, [countrySearch]);
 
@@ -176,7 +129,7 @@ const ProfileTypeStep = ({ onComplete, onBack }: ProfileTypeStepProps) => {
   const filteredParticulierCountries = useMemo(() => {
     if (!particulierCountrySearch.trim()) return COUNTRIES;
     return COUNTRIES.filter((c) =>
-      c.toLowerCase().includes(particulierCountrySearch.toLowerCase())
+      c !== "---" && c.libelle.toLowerCase().includes(particulierCountrySearch.toLowerCase())
     );
   }, [particulierCountrySearch]);
 
@@ -194,14 +147,14 @@ const ProfileTypeStep = ({ onComplete, onBack }: ProfileTypeStepProps) => {
         return companyName.trim().length > 0 && country.trim().length > 0;
       case "particulier":
         // Si France, require code postal et ville; sinon juste le pays
-        if (particulierCountry === "France") {
+        if (particulierCountryID == 1) {
           return postalCode.trim().length >= 5 && city.trim().length > 0;
         }
-        return particulierCountry.trim().length > 0;
+        return particulierCountryID > 0;
       default:
         return false;
     }
-  }, [selectedType, selectedCompany, postalCode, city, companyName, country, showManualCompanyForm, manualCompanyName, manualPostalCode, manualCity, particulierCountry]);
+  }, [selectedType, selectedCompany, postalCode, city, companyName, countryID, showManualCompanyForm, manualCompanyName, manualPostalCode, manualCity, particulierCountryID, particulierPostalCode, particulierCity]);
 
   const handleNext = () => {
     if (!isValid) return;
@@ -211,27 +164,38 @@ const ProfileTypeStep = ({ onComplete, onBack }: ProfileTypeStepProps) => {
     switch (selectedType) {
       case "pro_france":
         if (showManualCompanyForm) {
+          data.countryID   = 1;
           data.companyName = manualCompanyName;
-          data.postalCode = manualPostalCode;
-          data.city = manualCity;
+          data.postalCode  = manualPostalCode;
+          data.city        = manualCity;
+
         } else {
-          data.company = selectedCompany!;
+          data.countryID   = 1;
+          data.companyName = selectedCompany?.name;
+          data.postalCode  = selectedCompany?.postalCode;
+          data.city        = selectedCompany?.city;
+          data.siren       = selectedCompany?.siren;
         }
         break;
+
       case "creation":
         data.postalCode = postalCode;
-        data.city = city;
+        data.city       = city;
         break;
+
       case "particulier":
-        data.country = particulierCountry;
-        if (particulierCountry === "France") {
-          data.postalCode = postalCode;
-          data.city = city;
+        data.country   = particulierCountry;
+        data.countryID = particulierCountryID;
+        if (particulierCountryID == 1) {
+          data.postalCode = particulierPostalCode;
+          data.city       = particulierCity;
         }
         break;
+
       case "pro_foreign":
         data.companyName = companyName;
-        data.country = country;
+        data.country     = country;
+        data.countryID   = countryID;
         break;
     }
 
@@ -271,7 +235,7 @@ const ProfileTypeStep = ({ onComplete, onBack }: ProfileTypeStepProps) => {
                 <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-foreground leading-tight">
                   Êtes-vous un professionnel ou un particulier ?
                 </h2>
-                
+
                 {/* Reassurance banner - connected to the question */}
                 <div className="inline-flex items-center gap-3 rounded-full bg-accent/15 border border-accent/30 px-5 py-2.5 shadow-sm">
                   <div className="flex items-center justify-center h-8 w-8 rounded-full bg-accent text-accent-foreground shrink-0">
@@ -414,7 +378,7 @@ const ProfileTypeStep = ({ onComplete, onBack }: ProfileTypeStepProps) => {
                               ← Retour à la recherche
                             </button>
                           </div>
-                          
+
                           <div className="space-y-3">
                             <div>
                               <label className="text-sm text-muted-foreground">Nom de la société</label>
@@ -426,7 +390,7 @@ const ProfileTypeStep = ({ onComplete, onBack }: ProfileTypeStepProps) => {
                                 className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                               />
                             </div>
-                            
+
                             <div className="grid grid-cols-2 gap-3">
                               <div className="relative">
                                 <label className="text-sm text-muted-foreground">Code postal</label>
@@ -443,30 +407,41 @@ const ProfileTypeStep = ({ onComplete, onBack }: ProfileTypeStepProps) => {
                                   placeholder="75001"
                                   className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                                 />
-                                
+
                                 {showManualPostalCodeSuggestions && manualPostalCodeSuggestions.length > 0 && !manualCity && (
                                   <div className="absolute z-50 mt-1 w-[calc(200%+0.75rem)] rounded-lg border border-border bg-card shadow-lg max-h-48 overflow-y-auto">
-                                    {manualPostalCodeSuggestions.map((item, index) => (
-                                      <button
-                                        key={`manual-${item.postalCode}-${item.city}-${index}`}
-                                        onClick={() => {
-                                          setManualPostalCode(item.postalCode);
-                                          setManualCity(item.city);
-                                          setShowManualPostalCodeSuggestions(false);
-                                        }}
-                                        className={cn(
-                                          "w-full text-left px-3 py-2 hover:bg-muted transition-colors text-sm",
-                                          index !== manualPostalCodeSuggestions.length - 1 && "border-b border-border"
-                                        )}
-                                      >
-                                        <span className="font-medium text-foreground">{item.postalCode}</span>
-                                        <span className="text-muted-foreground"> - {item.city}</span>
-                                      </button>
-                                    ))}
+                                    {manualPostalCodeLoading ? (
+                                      <div className="flex items-center justify-center gap-2 py-4 text-sm text-muted-foreground">
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                        Recherche...
+                                      </div>
+                                    ) : manualPostalCodeSuggestions.length > 0 ? (
+                                      manualPostalCodeSuggestions.map((item, index) => (
+                                        <button
+                                          key={`manual-${item.postalCode}-${item.city}-${index}`}
+                                          onClick={() => {
+                                            setManualPostalCode(item.postalCode);
+                                            setManualCity(item.city);
+                                            setShowManualPostalCodeSuggestions(false);
+                                          }}
+                                          className={cn(
+                                            "w-full text-left px-3 py-2 hover:bg-muted transition-colors text-sm",
+                                            index !== manualPostalCodeSuggestions.length - 1 && "border-b border-border"
+                                          )}
+                                        >
+                                          <span className="font-medium text-foreground">{item.postalCode}</span>
+                                          <span className="text-muted-foreground"> - {item.city}</span>
+                                        </button>
+                                      ))
+                                    ) : (
+                                      <div className="px-4 py-3 text-sm text-muted-foreground text-center">
+                                        Aucune ville trouvée
+                                      </div>
+                                    )}
                                   </div>
                                 )}
                               </div>
-                              
+
                               <div>
                                 <label className="text-sm text-muted-foreground">Ville</label>
                                 <input
@@ -541,32 +516,44 @@ const ProfileTypeStep = ({ onComplete, onBack }: ProfileTypeStepProps) => {
                               setPostalCode(newPostalCode);
                               setCity("");
                               setShowPostalCodeSuggestions(newPostalCode.length >= 2);
+                              console.log("New postal code:", showPostalCodeSuggestions);
                             }}
                             onFocus={() => postalCode.length >= 2 && setShowPostalCodeSuggestions(true)}
                             placeholder="75001"
                             className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                           />
-                          
+
                           {showPostalCodeSuggestions && postalCodeSuggestions.length > 0 && !city && (
                             <div className="absolute z-50 mt-1 w-[calc(200%+0.75rem)] rounded-lg border border-border bg-card shadow-lg max-h-48 overflow-y-auto">
-                              {postalCodeSuggestions.map((item, index) => (
-                                <button
-                                  key={`${item.postalCode}-${item.city}-${index}`}
-                                  onClick={() => {
-                                    setPostalCode(item.postalCode);
-                                    setCity(item.city);
-                                    setShowPostalCodeSuggestions(false);
-                                  }}
-                                  className={cn(
-                                    "w-full text-left px-4 py-2.5 text-sm hover:bg-muted transition-colors",
-                                    index === 0 && "rounded-t-lg",
-                                    index === postalCodeSuggestions.length - 1 && "rounded-b-lg"
-                                  )}
-                                >
-                                  <span className="font-medium">{item.postalCode}</span>
-                                  <span className="text-muted-foreground"> — {item.city}</span>
-                                </button>
-                              ))}
+                              {postalCodeLoading ? (
+                                <div className="flex items-center justify-center gap-2 py-4 text-sm text-muted-foreground">
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                  Recherche...
+                                </div>
+                              ) : postalCodeSuggestions.length > 0 ? (
+                                postalCodeSuggestions.map((item, index) => (
+                                  <button
+                                    key={`${item.postalCode}-${item.city}-${index}`}
+                                    onClick={() => {
+                                      setPostalCode(item.postalCode);
+                                      setCity(item.city);
+                                      setShowPostalCodeSuggestions(false);
+                                    }}
+                                    className={cn(
+                                      "w-full text-left px-4 py-2.5 text-sm hover:bg-muted transition-colors",
+                                      index === 0 && "rounded-t-lg",
+                                      index === postalCodeSuggestions.length - 1 && "rounded-b-lg"
+                                    )}
+                                  >
+                                    <span className="font-medium">{item.postalCode}</span>
+                                    <span className="text-muted-foreground"> — {item.city}</span>
+                                  </button>
+                                ))
+                              ) : (
+                                <div className="px-4 py-3 text-sm text-muted-foreground text-center">
+                                  Aucune ville trouvée
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
@@ -643,7 +630,7 @@ const ProfileTypeStep = ({ onComplete, onBack }: ProfileTypeStepProps) => {
                             </span>
                             <ArrowRight className="h-4 w-4 text-muted-foreground rotate-90" />
                           </button>
-                          
+
                           {showCountryDropdown && (
                             <div className="absolute z-10 mt-1 w-full rounded-lg border border-border bg-background shadow-lg">
                               <div className="p-2 border-b border-border">
@@ -669,19 +656,23 @@ const ProfileTypeStep = ({ onComplete, onBack }: ProfileTypeStepProps) => {
                                     );
                                   }
 
-                                  return (
-                                    <button
-                                      key={c}
-                                      onClick={() => {
-                                        setCountry(c);
-                                        setShowCountryDropdown(false);
-                                        setCountrySearch("");
-                                      }}
-                                      className="w-full text-left px-4 py-2 text-sm hover:bg-muted/50 transition-colors"
-                                    >
-                                      {c}
-                                    </button>
-                                  );
+                                  if(c.id !== 1){
+                                    return (
+                                      <button
+                                        key={c.id}
+                                        onClick={() => {
+                                          setCountry(c.libelle);
+                                          setCountryID(c.id);
+                                          setShowCountryDropdown(false);
+                                          setCountrySearch("");
+                                        }}
+                                        className="w-full text-left px-4 py-2 text-sm hover:bg-muted/50 transition-colors"
+                                      >
+                                        {c.libelle}
+                                      </button>
+                                    );
+                                  }
+
                                 })}
                               </div>
                             </div>
@@ -767,20 +758,21 @@ const ProfileTypeStep = ({ onComplete, onBack }: ProfileTypeStepProps) => {
                               >
                                 France
                               </button>
-                              {filteredParticulierCountries.filter(c => c !== "France" && c !== "---").map((c) => (
+                              {filteredParticulierCountries.filter(c => c.libelle !== "France" && c !== "---").map((c) => (
                                 <button
-                                  key={c}
+                                  key={c.id}
                                   onClick={() => {
-                                    setParticulierCountry(c);
+                                    setParticulierCountry(c.libelle);
                                     setShowParticulierCountryDropdown(false);
+                                    setParticulierCountryID(c.id);
                                     setParticulierCountrySearch("");
                                     // Clear postal code and city when changing country
-                                    setPostalCode("");
-                                    setCity("");
+                                    setParticulierPostalCode("");
+                                    setParticulierCity("");
                                   }}
                                   className="w-full text-left px-4 py-2 text-sm hover:bg-muted/50 transition-colors"
                                 >
-                                  {c}
+                                  {c.libelle}
                                 </button>
                               ))}
                             </div>
@@ -795,38 +787,49 @@ const ProfileTypeStep = ({ onComplete, onBack }: ProfileTypeStepProps) => {
                             <label className="text-sm text-muted-foreground">Code postal</label>
                             <input
                               type="text"
-                              value={postalCode}
+                              value={particulierPostalCode}
                               onChange={(e) => {
                                 const newPostalCode = e.target.value.replace(/\D/g, "").slice(0, 5);
-                                setPostalCode(newPostalCode);
-                                setCity("");
-                                setShowPostalCodeSuggestions(newPostalCode.length >= 2);
+                                setParticulierPostalCode(newPostalCode);
+                                setParticulierCity("");
+                                setShowParticulierPostalCodeSuggestions(newPostalCode.length >= 2);
                               }}
-                              onFocus={() => postalCode.length >= 2 && setShowPostalCodeSuggestions(true)}
+                              onFocus={() => particulierPostalCode.length >= 2 && setShowParticulierPostalCodeSuggestions(true)}
                               placeholder="75001"
                               className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                             />
 
-                            {showPostalCodeSuggestions && postalCodeSuggestions.length > 0 && !city && (
+                            {particulierShowPostalCodeSuggestions && particulierPostalCodeSuggestions.length > 0 && !particulierCity && (
                               <div className="absolute z-50 mt-1 w-[calc(200%+0.75rem)] rounded-lg border border-border bg-card shadow-lg max-h-48 overflow-y-auto">
-                                {postalCodeSuggestions.map((item, index) => (
-                                  <button
-                                    key={`particulier-${item.postalCode}-${item.city}-${index}`}
-                                    onClick={() => {
-                                      setPostalCode(item.postalCode);
-                                      setCity(item.city);
-                                      setShowPostalCodeSuggestions(false);
-                                    }}
-                                    className={cn(
-                                      "w-full text-left px-4 py-2.5 text-sm hover:bg-muted transition-colors",
-                                      index === 0 && "rounded-t-lg",
-                                      index === postalCodeSuggestions.length - 1 && "rounded-b-lg"
-                                    )}
-                                  >
-                                    <span className="font-medium">{item.postalCode}</span>
-                                    <span className="text-muted-foreground"> — {item.city}</span>
-                                  </button>
-                                ))}
+                                {particulierPostalCodeLoading ? (
+                                  <div className="flex items-center justify-center gap-2 py-4 text-sm text-muted-foreground">
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    Recherche...
+                                  </div>
+                                ) : particulierPostalCodeSuggestions.length > 0 ? (
+                                  particulierPostalCodeSuggestions.map((item, index) => (
+                                    <button
+                                      key={`particulier-${item.postalCode}-${item.city}-${index}`}
+                                      onClick={() => {
+                                        setParticulierPostalCode(item.postalCode);
+                                        setParticulierCity(item.city);
+                                        setShowParticulierPostalCodeSuggestions(false);
+                                      }}
+                                      className={cn(
+                                        "w-full text-left px-4 py-2.5 text-sm hover:bg-muted transition-colors",
+                                        index === 0 && "rounded-t-lg",
+                                        index === particulierPostalCodeSuggestions.length - 1 && "rounded-b-lg"
+                                      )}
+                                    >
+                                      <span className="font-medium">{item.postalCode}</span>
+                                      <span className="text-muted-foreground"> — {item.city}</span>
+                                    </button>
+                                  ))
+                                ) : (
+                                  <div className="px-4 py-3 text-sm text-muted-foreground text-center">
+                                    Aucune ville trouvée
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>
@@ -834,7 +837,7 @@ const ProfileTypeStep = ({ onComplete, onBack }: ProfileTypeStepProps) => {
                             <label className="text-sm text-muted-foreground">Ville</label>
                             <input
                               type="text"
-                              value={city}
+                              value={particulierCity}
                               onChange={(e) => setCity(e.target.value)}
                               placeholder="Ville"
                               className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"

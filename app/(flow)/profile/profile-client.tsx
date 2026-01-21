@@ -6,7 +6,15 @@ import ProfileTypeStep from '@/components/flow/ProfileTypeStep';
 import MatchingLoader from '@/components/flow/MatchingLoader';
 import type { ProfileData } from '@/types';
 
-export default function ProfileClient() {
+interface ProfileClientProps {
+  priorityCountries: string[];
+  otherCountries: string[];
+}
+
+export default function ProfileClient({
+  priorityCountries,
+  otherCountries,
+}: ProfileClientProps) {
   const router = useRouter();
   const [showLoader, setShowLoader] = useState(false);
 
@@ -32,6 +40,8 @@ export default function ProfileClient() {
     <ProfileTypeStep
       onComplete={handleComplete}
       onBack={handleBack}
+      priorityCountries={priorityCountries}
+      otherCountries={otherCountries}
     />
   );
 }

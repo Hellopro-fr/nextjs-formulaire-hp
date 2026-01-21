@@ -41,6 +41,8 @@ export interface ProfileData {
   postalCode?: string;
   city?: string;
   country?: string;
+  siren?: string;
+  countryID?: number;
 }
 
 export interface PostalCodeCity {
