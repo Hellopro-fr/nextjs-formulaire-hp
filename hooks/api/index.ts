@@ -8,3 +8,4 @@ export * from './useSuppliers';
 export * from './useLeadSubmission';
 export * from './useSiren';
 export * from './useBuyer';
+export * from './useDynamicQuestionnaire';

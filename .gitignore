@@ -5,6 +5,7 @@
 .env.production
 .env.production.dev
 .env.production.prod
+modif_a_faire.md
 .yarn/install-state.gz
 
 # Testing
