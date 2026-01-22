@@ -1,9 +1,24 @@
 /** @type {import('next').NextConfig} */
+
+// Version de build - MODIFIER À CHAQUE DÉPLOIEMENT pour forcer le cache busting
+const BUILD_VERSION = '1.0.0';
+
 const nextConfig = {
   reactStrictMode: true,
 
   // Build standalone pour Docker
   output: 'standalone',
+
+  // Build ID unique basé sur la version + timestamp
+  // Force le navigateur à recharger les fichiers JS/CSS
+  generateBuildId: async () => {
+    return `${BUILD_VERSION}-${Date.now()}`;
+  },
+
+  // Exposer la version au frontend
+  env: {
+    NEXT_PUBLIC_BUILD_VERSION: BUILD_VERSION,
+  },
 
   // URL de base pour le proxy Apache
   basePath: '/formulaire',
