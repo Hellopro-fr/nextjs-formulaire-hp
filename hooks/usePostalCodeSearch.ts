@@ -25,6 +25,7 @@ export function usePostalCodeSearch({
     if (!enabled || query.length < 3) {
       setData([]);
       setError(null);
+      setIsLoading(false);
       return;
     }
 

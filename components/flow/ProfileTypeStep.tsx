@@ -836,7 +836,7 @@ const ProfileTypeStep = ({ priorityCountries, otherCountries, onComplete, onBack
                             <input
                               type="text"
                               value={particulierCity}
-                              onChange={(e) => setCity(e.target.value)}
+                              onChange={(e) => setParticulierCity(e.target.value)}
                               placeholder="Ville"
                               className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                             />
