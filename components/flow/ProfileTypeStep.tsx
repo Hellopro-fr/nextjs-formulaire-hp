@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { ArrowLeft, ArrowRight, Search, Building2, Sparkles, Globe, User, MapPin, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ProgressHeader from "./ProgressHeader";
@@ -9,6 +9,12 @@ import { usePostalCodeSearch } from "@/hooks/usePostalCodeSearch";
 import { useFlowStore } from "@/lib/stores/flow-store";
 import type { ProfileType, CompanyResult, ProfileData } from "@/types";
 import type { SirenCompanyData } from "@/lib/api/services/siret.service";
+import {
+  trackProfileView,
+  trackProfileTypeSelected,
+  trackProfileComplete,
+  trackCompanySearch,
+} from "@/lib/analytics";
 
 
 interface Country {
@@ -32,6 +38,17 @@ const STEPS = [
 const ProfileTypeStep = ({ priorityCountries, otherCountries, onComplete, onBack }: ProfileTypeStepProps) => {
   // Store Zustand pour persistance dans sessionStorage
   const { setProfileData } = useFlowStore();
+
+  // Ref pour éviter les doubles appels en StrictMode
+  const hasTrackedView = useRef(false);
+
+  // Track profile view au montage
+  useEffect(() => {
+    if (!hasTrackedView.current) {
+      hasTrackedView.current = true;
+      trackProfileView();
+    }
+  }, []);
 
   const [selectedType, setSelectedType] = useState<ProfileType>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -69,6 +86,13 @@ const ProfileTypeStep = ({ priorityCountries, otherCountries, onComplete, onBack
     { query: searchQuery },
     searchQuery.length >= 2 && !selectedCompany && !showManualCompanyForm
   );
+
+  // Track company search quand les résultats arrivent
+  useEffect(() => {
+    if (searchQuery.length >= 2 && sirenResults && !sirenLoading) {
+      trackCompanySearch(searchQuery, sirenResults.length);
+    }
+  }, [searchQuery, sirenResults, sirenLoading]);
 
   // Postal code search for "creation" section
   const {
@@ -235,6 +259,16 @@ const ProfileTypeStep = ({ priorityCountries, otherCountries, onComplete, onBack
     // Persister dans le store Zustand (sessionStorage)
     setProfileData(data);
 
+    // Track profile complete
+    const hasCompany = selectedType === "pro_france" || selectedType === "pro_foreign";
+    const location = data.city ? `${data.postalCode} ${data.city}` : data.country;
+    trackProfileComplete(
+      selectedType || 'unknown',
+      hasCompany,
+      data.countryID,
+      location
+    );
+
     onComplete(data);
   };
 
@@ -295,6 +329,7 @@ const ProfileTypeStep = ({ priorityCountries, otherCountries, onComplete, onBack
                   <button
                     onClick={() => {
                       setSelectedType("pro_france");
+                      trackProfileTypeSelected("pro_france");
                       setSelectedCompany(null);
                       setSearchQuery("");
                       setShowManualCompanyForm(false);
@@ -513,7 +548,10 @@ const ProfileTypeStep = ({ priorityCountries, otherCountries, onComplete, onBack
                   )}
                 >
                   <button
-                    onClick={() => setSelectedType("creation")}
+                    onClick={() => {
+                      setSelectedType("creation");
+                      trackProfileTypeSelected("creation");
+                    }}
                     className="w-full text-left"
                   >
                     <div className="flex items-center gap-3">
@@ -689,7 +727,10 @@ const ProfileTypeStep = ({ priorityCountries, otherCountries, onComplete, onBack
                   )}
                 >
                   <button
-                    onClick={() => setSelectedType("pro_foreign")}
+                    onClick={() => {
+                      setSelectedType("pro_foreign");
+                      trackProfileTypeSelected("pro_foreign");
+                    }}
                     className="w-full text-left"
                   >
                     <div className="flex items-center gap-3">
@@ -800,7 +841,10 @@ const ProfileTypeStep = ({ priorityCountries, otherCountries, onComplete, onBack
                   )}
                 >
                   <button
-                    onClick={() => setSelectedType("particulier")}
+                    onClick={() => {
+                      setSelectedType("particulier");
+                      trackProfileTypeSelected("particulier");
+                    }}
                     className="w-full text-left"
                   >
                     <div className="flex items-center gap-3">

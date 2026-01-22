@@ -1,11 +1,17 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import ProgressHeader from "./ProgressHeader";
 import QuestionScreen from "./QuestionScreen";
 import { QUESTIONS } from "@/data/questions";
 import { useFlowStore } from "@/lib/stores/flow-store";
 import { useDynamicQuestionnaire } from "@/hooks/api/useDynamicQuestionnaire";
+import {
+  trackGTMFunnelStart,
+  trackQuestionView,
+  trackGTMQuestionnaireComplete,
+  setFunnelContext,
+} from "@/lib/analytics";
 
 interface NeedsQuestionnaireProps {
   onComplete: (answers: Record<number, string[]> | Record<string, string[]>) => void;
@@ -42,19 +48,35 @@ const NeedsQuestionnaire = ({ onComplete, rubriqueId }: NeedsQuestionnaireProps)
   // State pour le mode statique
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
 
-  // Initialiser le timestamp de début du funnel
+  // Ref pour éviter les doubles appels en StrictMode
+  const hasTrackedStart = useRef(false);
+  const lastTrackedQuestionIndex = useRef(-1);
+
+  // Initialiser le timestamp de début du funnel et tracker le début
   useEffect(() => {
     if (!startTime) {
       setStartTime(Date.now());
     }
-  }, [startTime, setStartTime]);
+
+    // Track funnel start (une seule fois)
+    if (!hasTrackedStart.current) {
+      hasTrackedStart.current = true;
+      setFunnelContext({
+        funnel_devisplus: true,
+        funnel_context: isDynamicMode ? 'dynamic' : 'static',
+      });
+      trackGTMFunnelStart();
+    }
+  }, [startTime, setStartTime, isDynamicMode]);
 
   // Quand le questionnaire dynamique est terminé
   useEffect(() => {
     if (isDynamicMode && dynamicQuestionnaire.isComplete) {
+      const timeSpent = startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
+      trackGTMQuestionnaireComplete(dynamicQuestionnaire.progress.total, timeSpent);
       onComplete(dynamicAnswers);
     }
-  }, [isDynamicMode, dynamicQuestionnaire.isComplete, dynamicAnswers, onComplete]);
+  }, [isDynamicMode, dynamicQuestionnaire.isComplete, dynamicQuestionnaire.progress.total, dynamicAnswers, onComplete, startTime]);
 
   // === MODE DYNAMIQUE ===
   if (isDynamicMode) {
@@ -116,6 +138,18 @@ const NeedsQuestionnaire = ({ onComplete, rubriqueId }: NeedsQuestionnaireProps)
       );
     }
 
+    // Track question view en mode dynamique
+    useEffect(() => {
+      if (currentQuestion && lastTrackedQuestionIndex.current !== currentIndex) {
+        lastTrackedQuestionIndex.current = currentIndex;
+        trackQuestionView(currentIndex, {
+          question_id: currentQuestion.id || currentIndex + 1,
+          question_title: currentQuestion.title,
+          total_questions: progress.total,
+        });
+      }
+    }, [currentQuestion, currentIndex, progress.total]);
+
     // Calculate progress for step 1 (0-33%)
     const questionProgress = progress.percent * 0.33;
 
@@ -131,7 +165,7 @@ const NeedsQuestionnaire = ({ onComplete, rubriqueId }: NeedsQuestionnaireProps)
           setDynamicAnswer(questionCode, [...currentAnswers, answerCode]);
         }
       } else {
-        // Single select - submit and advance
+        // Single select - submit and advance (la vue de la question suivante sera trackée)
         submitAnswer([answerCode]);
       }
     };
@@ -140,6 +174,7 @@ const NeedsQuestionnaire = ({ onComplete, rubriqueId }: NeedsQuestionnaireProps)
       const questionCode = currentQuestion.code || `Q${currentIndex + 1}`;
       const currentAnswers = dynamicAnswers[questionCode] || [];
       if (currentAnswers.length > 0) {
+        // La vue de la question suivante sera trackée automatiquement
         submitAnswer(currentAnswers);
       }
     };
@@ -190,6 +225,18 @@ const NeedsQuestionnaire = ({ onComplete, rubriqueId }: NeedsQuestionnaireProps)
   const currentQuestion = QUESTIONS[currentQuestionIndex];
   const totalQuestions = QUESTIONS.length;
 
+  // Track question view quand l'index change (mode statique)
+  useEffect(() => {
+    if (!isDynamicMode && lastTrackedQuestionIndex.current !== currentQuestionIndex) {
+      lastTrackedQuestionIndex.current = currentQuestionIndex;
+      trackQuestionView(currentQuestionIndex, {
+        question_id: currentQuestion.id,
+        question_title: currentQuestion.title,
+        total_questions: totalQuestions,
+      });
+    }
+  }, [isDynamicMode, currentQuestionIndex, currentQuestion, totalQuestions]);
+
   const handleSelectAnswer = (answerId: string, autoAdvance?: boolean) => {
     const currentAnswers = userAnswers[currentQuestion.id] || [];
 
@@ -219,9 +266,12 @@ const NeedsQuestionnaire = ({ onComplete, rubriqueId }: NeedsQuestionnaireProps)
 
   const handleNext = () => {
     if (currentQuestionIndex < totalQuestions - 1) {
+      // La vue de la question suivante sera trackée automatiquement
       setCurrentQuestionIndex((prev) => prev + 1);
     } else {
       // All questions answered, proceed to selection
+      const timeSpent = startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
+      trackGTMQuestionnaireComplete(totalQuestions, timeSpent);
       onComplete(userAnswers);
     }
   };

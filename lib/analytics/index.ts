@@ -1,10 +1,15 @@
 // GTM exports
 export {
   pushToDataLayer,
+  setFunnelContext,
+  getFunnelContext,
+  trackQuoteFunnel,
   trackFunnelStart as trackGTMFunnelStart,
+  trackQuestionView,
   trackQuestionAnswered,
   trackQuestionNavigation,
   trackQuestionnaireComplete as trackGTMQuestionnaireComplete,
+  trackProfileView,
   trackProfileTypeSelected,
   trackProfileComplete,
   trackSupplierCardClick,

@@ -1,5 +1,33 @@
 // Global types are declared in types/global.d.ts
 
+// =============================================================================
+// TYPES
+// =============================================================================
+
+type StepType = 'init' | 'question' | 'choix-propart' | 'selection' | 'contact' | 'conversion';
+
+interface FunnelContext {
+  funnel_devisplus?: boolean;
+  funnel_context?: string;
+  rubrique_id?: number;
+  rubrique_name?: string;
+  page_location_uri?: string;
+  abtest1?: string;
+}
+
+interface QuestionData {
+  question_id?: number;
+  question_title?: string;
+  answer_ids?: string[];
+  is_multiselect?: boolean;
+  total_questions?: number;
+}
+
+
+// =============================================================================
+// HELPERS
+// =============================================================================
+
 /**
  * Push un événement dans le dataLayer GTM
  */
@@ -10,177 +38,6 @@ export function pushToDataLayer(event: string, data?: Record<string, unknown>) {
       ...data,
     });
   }
-}
-
-/**
- * Track le début du funnel
- */
-export function trackFunnelStart(step: number = 1) {
-  pushToDataLayer('funnel_start', { step });
-}
-
-/**
- * Track une question répondue
- */
-export function trackQuestionAnswered(
-  questionId: number,
-  questionTitle: string,
-  answers: string[],
-  isMultiSelect: boolean
-) {
-  pushToDataLayer('question_answered', {
-    question_id: questionId,
-    question_title: questionTitle,
-    answers,
-    is_multiselect: isMultiSelect,
-  });
-}
-
-/**
- * Track la navigation entre questions
- */
-export function trackQuestionNavigation(
-  fromQuestion: number,
-  toQuestion: number,
-  direction: 'next' | 'back'
-) {
-  pushToDataLayer('question_navigation', {
-    from_question: fromQuestion,
-    to_question: toQuestion,
-    direction,
-  });
-}
-
-/**
- * Track la fin du questionnaire
- */
-export function trackQuestionnaireComplete(totalQuestions: number, timeSpentSeconds: number) {
-  pushToDataLayer('questionnaire_complete', {
-    total_questions: totalQuestions,
-    time_spent_seconds: timeSpentSeconds,
-  });
-}
-
-/**
- * Track la sélection du type de profil
- */
-export function trackProfileTypeSelected(profileType: string) {
-  pushToDataLayer('profile_type_selected', {
-    profile_type: profileType,
-  });
-}
-
-/**
- * Track la complétion du profil
- */
-export function trackProfileComplete(profileType: string, hasCompany: boolean, location?: string) {
-  pushToDataLayer('profile_complete', {
-    profile_type: profileType,
-    has_company: hasCompany,
-    location,
-  });
-}
-
-/**
- * Track le clic sur une carte fournisseur
- */
-export function trackSupplierCardClick(
-  supplierId: string,
-  supplierName: string,
-  matchScore: number,
-  action: 'view_details' | 'toggle_select'
-) {
-  pushToDataLayer('supplier_card_click', {
-    supplier_id: supplierId,
-    supplier_name: supplierName,
-    match_score: matchScore,
-    action,
-  });
-}
-
-/**
- * Track le changement de sélection fournisseur
- */
-export function trackSupplierSelectionChange(
-  supplierId: string,
-  action: 'add' | 'remove',
-  totalSelected: number
-) {
-  pushToDataLayer('supplier_selection_change', {
-    supplier_id: supplierId,
-    action,
-    total_selected: totalSelected,
-  });
-}
-
-/**
- * Track l'ouverture du modal de comparaison
- */
-export function trackComparisonModalOpen(supplierIds: string[]) {
-  pushToDataLayer('comparison_modal_open', {
-    suppliers_compared: supplierIds,
-  });
-}
-
-/**
- * Track la tentative de soumission du formulaire
- */
-export function trackFormSubmitAttempt(isValid: boolean, missingFields?: string[]) {
-  pushToDataLayer('form_submit_attempt', {
-    is_valid: isValid,
-    missing_fields: missingFields,
-  });
-}
-
-/**
- * Track la soumission réussie du lead
- */
-export function trackLeadSubmitted(leadId: string, suppliersCount: number, profileType: string) {
-  pushToDataLayer('lead_submitted', {
-    lead_id: leadId,
-    suppliers_count: suppliersCount,
-    profile_type: profileType,
-    conversion: true,
-  });
-}
-
-/**
- * Track une erreur de soumission
- */
-export function trackLeadSubmissionError(errorType: string, errorMessage: string) {
-  pushToDataLayer('lead_submission_error', {
-    error_type: errorType,
-    error_message: errorMessage,
-  });
-}
-
-/**
- * Track la recherche d'entreprise
- */
-export function trackCompanySearch(query: string, resultsCount: number) {
-  pushToDataLayer('company_search', {
-    query_length: query.length,
-    results_count: resultsCount,
-  });
-}
-
-/**
- * Track la vue de la page de sélection
- */
-export function trackSelectionPageView(recommendedCount: number, totalCount: number) {
-  pushToDataLayer('selection_page_view', {
-    recommended_count: recommendedCount,
-    total_count: totalCount,
-  });
-}
-
-/**
- * Track la vue du formulaire de contact
- */
-export function trackContactFormView(selectedSuppliersCount: number) {
-  pushToDataLayer('contact_form_view', {
-    selected_count: selectedSuppliersCount,
-  });
 }
 
 /**
@@ -225,6 +82,345 @@ function isFirstView(key: string): boolean {
     return true;
   }
   return false;
+}
+
+/**
+ * Obtenir le type d'appareil
+ */
+function getDeviceType(): string {
+  if (typeof window === 'undefined') return 'unknown';
+
+  const width = window.innerWidth;
+  if (width < 768) return 'mobile';
+  if (width < 1024) return 'tablet';
+  return 'desktop';
+}
+
+/**
+ * Obtenir les informations de l'appareil
+ */
+function getDeviceInfo() {
+  if (typeof window === 'undefined') {
+    return {
+      device_type: 'unknown',
+      screen_width: 0,
+      screen_height: 0,
+      user_agent: '',
+    };
+  }
+
+  return {
+    device_type: getDeviceType(),
+    screen_width: window.innerWidth,
+    screen_height: window.innerHeight,
+    user_agent: navigator.userAgent,
+  };
+}
+
+/**
+ * Obtenir le page_location_uri actuel
+ */
+function getPageLocationUri(): string {
+  if (typeof window === 'undefined') return '';
+  return window.location.pathname;
+}
+
+// =============================================================================
+// CONTEXTE FUNNEL (stocké en session)
+// =============================================================================
+
+let funnelContext: FunnelContext = {};
+
+/**
+ * Initialiser le contexte du funnel (à appeler au début)
+ */
+export function setFunnelContext(context: FunnelContext) {
+  funnelContext = { ...funnelContext, ...context };
+}
+
+/**
+ * Récupérer le contexte actuel
+ */
+export function getFunnelContext(): FunnelContext {
+  return funnelContext;
+}
+
+// =============================================================================
+// ÉVÉNEMENT PRINCIPAL : quote_form_funnel
+// =============================================================================
+
+/**
+ * Track une étape du funnel avec l'événement unique quote_form_funnel
+ */
+export function trackQuoteFunnel(
+  stepIndex: number,
+  stepName: string,
+  stepType: StepType,
+  additionalData?: Record<string, unknown>
+) {
+  const userId = getUserId();
+  const sessionId = getSessionId();
+
+  pushToDataLayer('quote_form_funnel', {
+    // Progression
+    step_index: stepIndex,
+    step_name: stepName,
+    step_number: stepIndex + 1,
+    step_type: stepType,
+
+    // Contexte funnel
+    funnel_devisplus: funnelContext.funnel_devisplus ?? true,
+    funnel_context: funnelContext.funnel_context ?? 'direct',
+    rubrique_id: funnelContext.rubrique_id,
+    rubrique_name: funnelContext.rubrique_name,
+    page_location_uri: getPageLocationUri(),
+    abtest1: funnelContext.abtest1 ?? 'original',
+
+    // Identifiants
+    user_id: userId,
+    session_id: sessionId,
+
+    // Données additionnelles
+    ...additionalData,
+  });
+}
+
+// =============================================================================
+// FONCTIONS DE TRACKING SPÉCIFIQUES (utilisent trackQuoteFunnel)
+// =============================================================================
+
+// Variable pour suivre le step_index courant
+let currentStepIndex = 0;
+
+/**
+ * Track le début du funnel
+ */
+export function trackFunnelStart(context?: FunnelContext) {
+  currentStepIndex = 0;
+  if (context) {
+    setFunnelContext(context);
+  }
+  trackQuoteFunnel(currentStepIndex, 'funnel-start', 'init');
+}
+
+/**
+ * Track l'affichage d'une question
+ */
+export function trackQuestionView(
+  questionIndex: number,
+  data?: QuestionData
+) {
+  currentStepIndex = questionIndex + 1; // +1 car funnel-start est à 0
+  const stepName = questionIndex === 0 ? '1ere-question' : `${questionIndex + 1}eme-question`;
+
+  trackQuoteFunnel(currentStepIndex, stepName, 'question', {
+    question_id: data?.question_id,
+    question_title: data?.question_title,
+  });
+}
+
+/**
+ * Track une question répondue
+ */
+export function trackQuestionAnswered(
+  questionIndex: number,
+  questionId: number,
+  questionTitle: string,
+  answerIds: string[],
+  isMultiSelect: boolean
+) {
+  currentStepIndex = questionIndex + 1;
+  const stepName = questionIndex === 0 ? '1ere-question-answered' : `${questionIndex + 1}eme-question-answered`;
+
+  trackQuoteFunnel(currentStepIndex, stepName, 'question', {
+    question_id: questionId,
+    question_title: questionTitle,
+    answer_ids: answerIds,
+    is_multiselect: isMultiSelect,
+  });
+}
+
+/**
+ * Track la fin du questionnaire
+ */
+export function trackQuestionnaireComplete(totalQuestions: number, timeSpentSeconds: number) {
+  currentStepIndex++;
+  trackQuoteFunnel(currentStepIndex, 'questionnaire-complete', 'question', {
+    total_questions: totalQuestions,
+    time_spent_seconds: timeSpentSeconds,
+  });
+}
+
+/**
+ * Track l'affichage de la page profil (choix pro/part)
+ */
+export function trackProfileView() {
+  currentStepIndex++;
+  trackQuoteFunnel(currentStepIndex, 'choix-propart', 'choix-propart');
+}
+
+/**
+ * Track la sélection du type de profil
+ */
+export function trackProfileTypeSelected(profileType: string) {
+  trackQuoteFunnel(currentStepIndex, 'choix-propart-selected', 'choix-propart', {
+    profile_type: profileType,
+  });
+}
+
+/**
+ * Track la complétion du profil
+ */
+export function trackProfileComplete(
+  profileType: string,
+  hasCompany: boolean,
+  countryId?: number,
+  location?: string
+) {
+  currentStepIndex++;
+  trackQuoteFunnel(currentStepIndex, 'profile-complete', 'choix-propart', {
+    profile_type: profileType,
+    has_company: hasCompany,
+    country_id: countryId,
+    location,
+  });
+}
+
+/**
+ * Track l'affichage de la page de sélection fournisseurs
+ */
+export function trackSelectionPageView(recommendedCount: number, totalCount: number) {
+  currentStepIndex++;
+  trackQuoteFunnel(currentStepIndex, 'selection-fournisseurs', 'selection', {
+    recommended_count: recommendedCount,
+    total_count: totalCount,
+  });
+}
+
+/**
+ * Track le clic sur une carte fournisseur
+ */
+export function trackSupplierCardClick(
+  supplierId: string,
+  supplierName: string,
+  matchScore: number,
+  action: 'view_details' | 'toggle_select'
+) {
+  trackQuoteFunnel(currentStepIndex, 'supplier-click', 'selection', {
+    supplier_id: supplierId,
+    supplier_name: supplierName,
+    match_score: matchScore,
+    action,
+  });
+}
+
+/**
+ * Track le changement de sélection fournisseur
+ */
+export function trackSupplierSelectionChange(
+  supplierId: string,
+  action: 'add' | 'remove',
+  totalSelected: number
+) {
+  trackQuoteFunnel(currentStepIndex, 'supplier-selection', 'selection', {
+    supplier_id: supplierId,
+    action,
+    total_selected: totalSelected,
+  });
+}
+
+/**
+ * Track l'ouverture du modal de comparaison
+ */
+export function trackComparisonModalView(supplierIds: string[]) {
+  const isFirstViewForSession = isFirstView('comparison_modal');
+
+  trackQuoteFunnel(currentStepIndex, 'comparison-modal', 'selection', {
+    suppliers_compared: supplierIds,
+    suppliers_count: supplierIds.length,
+    is_first_view: isFirstViewForSession,
+  });
+}
+
+/**
+ * Track l'affichage du formulaire de contact
+ */
+export function trackContactFormView(selectedSuppliersCount: number) {
+  currentStepIndex++;
+  trackQuoteFunnel(currentStepIndex, 'formulaire-contact', 'contact', {
+    selected_count: selectedSuppliersCount,
+  });
+}
+
+/**
+ * Track le remplissage d'un champ du formulaire
+ */
+export function trackContactFieldFilled(fieldName: string, fieldIndex: number) {
+  trackQuoteFunnel(currentStepIndex, `champ-coordonnees-${fieldIndex + 1}`, 'contact', {
+    field_name: fieldName,
+    field_index: fieldIndex,
+  });
+}
+
+/**
+ * Track la tentative de soumission du formulaire
+ */
+export function trackFormSubmitAttempt(isValid: boolean, missingFields?: string[]) {
+  trackQuoteFunnel(currentStepIndex, 'submit-attempt', 'contact', {
+    is_valid: isValid,
+    missing_fields: missingFields,
+  });
+}
+
+/**
+ * Track les erreurs de validation
+ */
+export function trackFormValidationErrors(
+  errorsCount: number,
+  errors?: Array<{ field: string; type: string; message: string }>
+) {
+  trackQuoteFunnel(currentStepIndex, 'validation-error', 'contact', {
+    errors_count: errorsCount,
+    errors,
+  });
+}
+
+/**
+ * Track la soumission réussie du lead
+ */
+export function trackLeadSubmitted(leadId: string, suppliersCount: number, profileType: string) {
+  currentStepIndex++;
+  trackQuoteFunnel(currentStepIndex, 'submit-success', 'conversion', {
+    lead_id: leadId,
+    suppliers_count: suppliersCount,
+    profile_type: profileType,
+    conversion: true,
+  });
+}
+
+/**
+ * Track une erreur de soumission
+ */
+export function trackLeadSubmissionError(errorType: string, errorMessage: string) {
+  trackQuoteFunnel(currentStepIndex, 'submit-error', 'conversion', {
+    error_type: errorType,
+    error_message: errorMessage,
+    conversion: false,
+  });
+}
+
+// =============================================================================
+// ÉVÉNEMENTS SECONDAIRES (hors funnel principal)
+// =============================================================================
+
+/**
+ * Track la recherche d'entreprise
+ */
+export function trackCompanySearch(query: string, resultsCount: number) {
+  pushToDataLayer('company_search', {
+    query_length: query.length,
+    results_count: resultsCount,
+  });
 }
 
 /**
@@ -274,25 +470,7 @@ export function trackCustomNeedModalView() {
 }
 
 /**
- * Track l'ouverture du modal de comparaison (avec déduplication)
- */
-export function trackComparisonModalView(supplierIds: string[]) {
-  const userId = getUserId();
-  const sessionId = getSessionId();
-  const isFirstViewForSession = isFirstView('comparison_modal');
-
-  pushToDataLayer('comparison_modal_view', {
-    user_id: userId,
-    session_id: sessionId,
-    is_first_view: isFirstViewForSession,
-    suppliers_compared: supplierIds,
-    suppliers_count: supplierIds.length,
-    timestamp: new Date().toISOString(),
-  });
-}
-
-/**
- * Track l'ouverture du modal fiche produit (avec déduplication)
+ * Track l'ouverture du modal fiche produit
  */
 export function trackProductModalView(productId: string, productName: string, supplierId: string) {
   const userId = getUserId();
@@ -329,39 +507,6 @@ export function identifyUser(email: string, profileType?: string, companyName?: 
 }
 
 /**
- * Obtenir le type d'appareil
- */
-function getDeviceType(): string {
-  if (typeof window === 'undefined') return 'unknown';
-
-  const width = window.innerWidth;
-  if (width < 768) return 'mobile';
-  if (width < 1024) return 'tablet';
-  return 'desktop';
-}
-
-/**
- * Obtenir les informations de l'appareil
- */
-function getDeviceInfo() {
-  if (typeof window === 'undefined') {
-    return {
-      device_type: 'unknown',
-      screen_width: 0,
-      screen_height: 0,
-      user_agent: '',
-    };
-  }
-
-  return {
-    device_type: getDeviceType(),
-    screen_width: window.innerWidth,
-    screen_height: window.innerHeight,
-    user_agent: navigator.userAgent,
-  };
-}
-
-/**
  * Track un abandon à une étape spécifique
  */
 export function trackFunnelAbandonment(
@@ -382,49 +527,6 @@ export function trackFunnelAbandonment(
     time_spent_seconds: timeSpentSeconds,
     last_action: lastAction,
     ...deviceInfo,
-    timestamp: new Date().toISOString(),
-  });
-}
-
-/**
- * Track une erreur de validation de formulaire
- */
-export function trackFormValidationError(
-  formName: string,
-  fieldName: string,
-  errorType: string,
-  errorMessage: string
-) {
-  const userId = getUserId();
-  const sessionId = getSessionId();
-
-  pushToDataLayer('form_validation_error', {
-    user_id: userId,
-    session_id: sessionId,
-    form_name: formName,
-    field_name: fieldName,
-    error_type: errorType,
-    error_message: errorMessage,
-    timestamp: new Date().toISOString(),
-  });
-}
-
-/**
- * Track toutes les erreurs de validation lors d'une tentative de soumission
- */
-export function trackFormValidationErrors(
-  formName: string,
-  errors: Array<{ field: string; type: string; message: string }>
-) {
-  const userId = getUserId();
-  const sessionId = getSessionId();
-
-  pushToDataLayer('form_validation_errors', {
-    user_id: userId,
-    session_id: sessionId,
-    form_name: formName,
-    errors_count: errors.length,
-    errors,
     timestamp: new Date().toISOString(),
   });
 }
@@ -474,4 +576,36 @@ export function trackTrafficSource() {
     landing_page: window.location.pathname,
     timestamp: new Date().toISOString(),
   });
+}
+
+// =============================================================================
+// EXPORTS POUR RÉTROCOMPATIBILITÉ (deprecated)
+// =============================================================================
+
+/** @deprecated Utiliser trackQuoteFunnel à la place */
+export function trackQuestionNavigation(
+  fromQuestion: number,
+  toQuestion: number,
+  direction: 'next' | 'back'
+) {
+  // Redirige vers le nouveau système
+  trackQuoteFunnel(toQuestion, `${toQuestion}eme-question`, 'question', {
+    from_question: fromQuestion,
+    direction,
+  });
+}
+
+/** @deprecated Utiliser trackComparisonModalView à la place */
+export function trackComparisonModalOpen(supplierIds: string[]) {
+  trackComparisonModalView(supplierIds);
+}
+
+/** @deprecated Utiliser trackFormValidationErrors à la place */
+export function trackFormValidationError(
+  _formName: string,
+  fieldName: string,
+  errorType: string,
+  errorMessage: string
+) {
+  trackFormValidationErrors(1, [{ field: fieldName, type: errorType, message: errorMessage }]);
 }
