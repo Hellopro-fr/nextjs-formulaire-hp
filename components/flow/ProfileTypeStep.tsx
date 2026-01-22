@@ -84,15 +84,13 @@ const ProfileTypeStep = ({ priorityCountries, otherCountries, onComplete, onBack
     isLoading: particulierPostalCodeLoading
   } = usePostalCodeSearch({
     query: particulierPostalCode,
-    enabled: particulierCountry === "France" && postalCode.length >= 3 && !city && selectedType === "particulier",
+    enabled: particulierCountry === "France" && particulierPostalCode.length >= 3 && !particulierCity && selectedType === "particulier",
   });
 
-  console.log("Priority countries:", priorityCountries);
-  console.log("Other countries:", otherCountries);
+
 
   const COUNTRIES = useMemo(() => {
     const priorityCountryIds = new Set(priorityCountries.map((c) => c.libelle));
-    console.log(priorityCountryIds);
     const filteredOtherCountries = otherCountries.filter(
       function(c){
         return !priorityCountryIds.has(c.libelle);
@@ -401,7 +399,7 @@ const ProfileTypeStep = ({ priorityCountries, otherCountries, onComplete, onBack
                                     const newPostalCode = e.target.value.replace(/\D/g, "").slice(0, 5);
                                     setManualPostalCode(newPostalCode);
                                     setManualCity("");
-                                    setShowManualPostalCodeSuggestions(newPostalCode.length >= 2);
+                                    setShowManualPostalCodeSuggestions(newPostalCode.length >= 1);
                                   }}
                                   onFocus={() => manualPostalCode.length >= 2 && setShowManualPostalCodeSuggestions(true)}
                                   placeholder="75001"
@@ -515,7 +513,7 @@ const ProfileTypeStep = ({ priorityCountries, otherCountries, onComplete, onBack
                               const newPostalCode = e.target.value.replace(/\D/g, "").slice(0, 5);
                               setPostalCode(newPostalCode);
                               setCity("");
-                              setShowPostalCodeSuggestions(newPostalCode.length >= 2);
+                              setShowPostalCodeSuggestions(newPostalCode.length >= 1);
                               console.log("New postal code:", showPostalCodeSuggestions);
                             }}
                             onFocus={() => postalCode.length >= 2 && setShowPostalCodeSuggestions(true)}
@@ -523,7 +521,7 @@ const ProfileTypeStep = ({ priorityCountries, otherCountries, onComplete, onBack
                             className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                           />
 
-                          {showPostalCodeSuggestions && postalCodeSuggestions.length > 0 && !city && (
+                          {showPostalCodeSuggestions && postalCode.length >= 1 && !city && (
                             <div className="absolute z-50 mt-1 w-[calc(200%+0.75rem)] rounded-lg border border-border bg-card shadow-lg max-h-48 overflow-y-auto">
                               {postalCodeLoading ? (
                                 <div className="flex items-center justify-center gap-2 py-4 text-sm text-muted-foreground">
@@ -792,14 +790,14 @@ const ProfileTypeStep = ({ priorityCountries, otherCountries, onComplete, onBack
                                 const newPostalCode = e.target.value.replace(/\D/g, "").slice(0, 5);
                                 setParticulierPostalCode(newPostalCode);
                                 setParticulierCity("");
-                                setShowParticulierPostalCodeSuggestions(newPostalCode.length >= 2);
+                                setShowParticulierPostalCodeSuggestions(true);
                               }}
                               onFocus={() => particulierPostalCode.length >= 2 && setShowParticulierPostalCodeSuggestions(true)}
                               placeholder="75001"
                               className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                             />
 
-                            {particulierShowPostalCodeSuggestions && particulierPostalCodeSuggestions.length > 0 && !particulierCity && (
+                            {particulierShowPostalCodeSuggestions && particulierPostalCode.length >=1 && (
                               <div className="absolute z-50 mt-1 w-[calc(200%+0.75rem)] rounded-lg border border-border bg-card shadow-lg max-h-48 overflow-y-auto">
                                 {particulierPostalCodeLoading ? (
                                   <div className="flex items-center justify-center gap-2 py-4 text-sm text-muted-foreground">

@@ -10,19 +10,28 @@ export function usePostalCodeSearch({
   query,
   enabled = true,
 }: UsePostalCodeSearchProps) {
+    console.log("usePostalCodeSearch called with query:", query, "enabled:", enabled);
   const [data, setData] = useState<PostalCodeCity[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  
+
   useEffect(() => {
+
+    setIsLoading(true);
+
+
     if (!enabled || query.length < 3) {
       setData([]);
       setError(null);
       return;
     }
 
+    console.log("here");
+
+
     const fetchData = async () => {
-      setIsLoading(true);
       setError(null);
       try {
         const results = await searchPostalCodeCities(query);
