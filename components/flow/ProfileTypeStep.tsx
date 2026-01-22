@@ -177,7 +177,7 @@ const ProfileTypeStep = ({ priorityCountries, otherCountries, onComplete, onBack
       case "particulier":
         // Si France, require code postal et ville; sinon juste le pays
         if (particulierCountryID == 1) {
-          return postalCode.trim().length >= 5 && city.trim().length > 0;
+          return particulierPostalCode.trim().length >= 5 && particulierCity.trim().length > 0;
         }
         return particulierCountryID > 0;
       default:
@@ -735,7 +735,7 @@ const ProfileTypeStep = ({ priorityCountries, otherCountries, onComplete, onBack
                             <span className={country ? "text-foreground" : "text-muted-foreground"}>
                               {country || "Sélectionner un pays"}
                             </span>
-                            <ArrowRight className="h-4 w-4 text-muted-foreground rotate-90" />
+                            <Globe className="h-4 w-4 text-muted-foreground" />
                           </button>
 
                           {showCountryDropdown && (
@@ -835,7 +835,7 @@ const ProfileTypeStep = ({ priorityCountries, otherCountries, onComplete, onBack
                           className="mt-1 w-full flex items-center justify-between rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-left focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                         >
                           <span className="text-foreground">{particulierCountry}</span>
-                          <ArrowRight className="h-4 w-4 text-muted-foreground rotate-90" />
+                          <Globe className="h-4 w-4 text-muted-foreground" />
                         </button>
 
                         {showParticulierCountryDropdown && (
