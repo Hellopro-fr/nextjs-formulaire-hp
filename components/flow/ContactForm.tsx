@@ -21,7 +21,9 @@ interface ContactFormProps {
 
 const ContactForm = ({ selectedSuppliers, onBack }: ContactFormProps) => {
   const router = useRouter();
-  const { userAnswers, profileData, selectedSupplierIds } = useFlowStore();
+  const { userAnswers, profileData, selectedSupplierIds, setContactData } = useFlowStore();
+  
+
   const leadSubmission = useLeadSubmission({ suppliers: selectedSuppliers });
 
   const [formData, setFormData] = useState<ContactFormData>({
@@ -51,13 +53,49 @@ const ContactForm = ({ selectedSuppliers, onBack }: ContactFormProps) => {
   // Dynamic buyer check via API
   const { data: buyerCheckResult } = useBuyerCheck(
     {
-      email: formData.email,
+      email     : formData.email,
+      rubriqueId: '2001661',
     },
     isEmailValid
   );
 
   const isExistingBuyer = buyerCheckResult?.isDuplicate || false;
   const isKnownBuyer = buyerCheckResult?.isKnown || false;
+
+  useEffect(() => {
+    let updatedData: ContactFormData | null = null;
+
+    // 1. On vérifie si l'acheteur est reconnu et si on a les données
+    if (isKnownBuyer && buyerCheckResult?.infoBuyer) {
+      const info = buyerCheckResult.infoBuyer as any;
+
+      // 2. On prépare l'objet complet avec les clés de votre interface ContactFormData
+      updatedData = {
+        ...formData,                   // On garde le message et les autres champs
+        email    : formData.email,      // L'email déjà saisi
+        firstName: info.prenom || "",
+        lastName : info.nom || "",
+        phone    : info.tel || "",
+      
+      };
+            
+    }else{
+      updatedData = {
+        ...formData, 
+        email      : formData.email,
+        firstName  : "",
+        lastName   : "",
+        phone      : "",
+        countryCode: "",
+      };
+    }
+
+    if (updatedData) {
+      setFormData(updatedData);
+    }
+    
+    // On ne déclenche cet effet que lorsque 'isKnownBuyer' ou 'infoBuyer' change
+  }, [isKnownBuyer, buyerCheckResult?.infoBuyer]);  
 
   // Show additional fields only if email is valid and not a known buyer
   const showAdditionalFields = isEmailValid && !isKnownBuyer;
@@ -121,9 +159,15 @@ const ContactForm = ({ selectedSuppliers, onBack }: ContactFormProps) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    let isValid = true;
+    let missingFields: string[] = [];
 
-    const isValid = validateForm();
-    const missingFields = Object.keys(errors);
+    if (!(isKnownBuyer && buyerCheckResult?.infoBuyer)) {      
+      isValid = validateForm();
+      missingFields = Object.keys(errors);
+    }
+
+    // console.log('missingFields ve' ,missingFields);
 
     trackFormSubmitAttempt(isValid, missingFields);
 
@@ -135,6 +179,8 @@ const ContactForm = ({ selectedSuppliers, onBack }: ContactFormProps) => {
       profileData?.type || 'unknown',
       formData.company || profileData?.company?.name
     );
+
+    setContactData(formData);
 
     // Submit lead
     leadSubmission.mutate({

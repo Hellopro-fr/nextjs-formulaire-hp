@@ -16,6 +16,7 @@ export interface BuyerCheckResult {
   isKnown: boolean;
   isDuplicate: boolean;
   message?: string;
+  infoBuyer?: object;
 }
 
 /**
@@ -62,7 +63,68 @@ export async function checkBuyerExists(
 
     // L'API Legacy retourne '' si pas de doublon, 'notifier' si doublon
     const isDuplicate = result.trim() === 'notifier';
-    const isKnown = result.trim() !== '';
+    let isKnown = result.trim() !== '';
+
+    const data = {
+        // "rubrique": "integer",
+        // "id_produit_ia": "mixed",
+        // "dir": "integer",
+        // "target": "string",
+        "value": "string",
+        // "mhp": "integer",
+        // "abtest": "string",
+        "init": {
+            "mail": params.email.trim(),
+            "rub" : params.rubriqueId || '',
+            // "msg": "string",
+            // "obj": "string",
+            // "qtte": "dsd",
+            // "frns": "integer", 
+            // "prod": "integer",
+            // "origine": "string",
+            // "type": "string",
+            // "critere": "string",
+            // "f_qtte": "string"
+        }
+    };
+
+    const formData_verif = new FormData();
+
+    Object.keys(data).forEach(key => { 
+        // On transtype "key" pour rassurer TypeScript
+        const typedKey = key as keyof typeof data;
+        const value = data[typedKey];
+
+        if (typeof value === 'object' && value !== null) {
+            // Traitement pour l'objet "init"
+            Object.keys(value).forEach(subKey => {
+                const typedSubKey = subKey as keyof typeof value;
+                formData_verif.append(`${key}[${subKey}]`, value[typedSubKey]);
+            });
+        } else {
+            // Traitement pour les variables simples
+            formData_verif.append(key, value as string);
+        }
+    });
+
+    const apiUrlVerif = `${apiBase}/api/buyer/verif-mail-acheteur`;
+
+    const responseVerif = await fetch(apiUrlVerif, {
+      method: 'POST',
+      body: formData_verif,
+    });
+
+    
+    if (!responseVerif.ok) {
+      throw new Error(`HTTP error! status: ${responseVerif.status}`); 
+    }
+    
+    const VerifResponse = await responseVerif.json();
+
+    // On vérifie si la clé 'verif' existe dans l'objet
+    // Si 'verif' est présent -> l'utilisateur n'est pas connu (isKnown = false)
+    // Si 'verif' est absent -> l'utilisateur est connu (isKnown = true)
+    isKnown = !('verif' in VerifResponse);
 
     return {
       data: {
@@ -71,6 +133,7 @@ export async function checkBuyerExists(
         message: isDuplicate
           ? 'Vous avez déjà effectué une demande dans cette même catégorie, elle est en cours de traitement.'
           : undefined,
+        infoBuyer: VerifResponse
       },
       error: null,
     };
