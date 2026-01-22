@@ -4,6 +4,69 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useFlowStore } from '@/lib/stores/flow-store';
 
+// =============================================================================
+// TYPES - Format API
+// =============================================================================
+
+// Format brut de l'API
+interface ApiQuestion {
+  id: number;
+  intitule: string;
+  choix: string;              // "1" = single, "2" = multi
+  justification: string | null;
+  id_reponse_parent: number | null;
+  id_question_parent: number | null;
+  reponses: ApiAnswer[];
+}
+
+interface ApiAnswer {
+  id: number;
+  reponse: string;
+  equivalence?: unknown[];    // Format à définir plus tard
+}
+
+// Format normalisé pour le frontend
+interface NormalizedQuestion {
+  id: number;
+  code: string;
+  title: string;
+  type: 'single' | 'multi';
+  justification: string | null;
+  answers: NormalizedAnswer[];
+}
+
+interface NormalizedAnswer {
+  id: string;
+  code: string;
+  mainText: string;
+}
+
+// =============================================================================
+// TRANSFORMERS - Convertir format API → format frontend
+// =============================================================================
+
+/**
+ * Transforme une question de l'API vers le format frontend
+ */
+function normalizeQuestion(apiQuestion: ApiQuestion, questionIndex: number): NormalizedQuestion {
+  return {
+    id: apiQuestion.id,
+    code: `Q${questionIndex + 1}`,
+    title: apiQuestion.intitule,
+    type: apiQuestion.choix === '2' ? 'multi' : 'single',
+    justification: apiQuestion.justification,
+    answers: apiQuestion.reponses.map((r) => ({
+      id: String(r.id),
+      code: String(r.id),
+      mainText: r.reponse,
+    })),
+  };
+}
+
+// =============================================================================
+// HOOK
+// =============================================================================
+
 export function useDynamicQuestionnaire(rubriqueId: string) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const { dynamicAnswers, setDynamicAnswer, resetDynamicAnswers } = useFlowStore();
@@ -18,12 +81,17 @@ export function useDynamicQuestionnaire(rubriqueId: string) {
     queryFn: async () => {
       const res = await fetch(`/api/questionnaire/q1?rubrique_id=${rubriqueId}`);
       if (!res.ok) throw new Error('Failed to fetch Q1');
-      return res.json();
+      const apiData: ApiQuestion = await res.json();
+
+      // Transformer vers le format frontend
+      return {
+        entryQuestion: normalizeQuestion(apiData, 0),
+      };
     },
     enabled: !!rubriqueId,
   });
 
-  // Réponse Q1 de l'utilisateur
+  // Réponse Q1 de l'utilisateur (utilise le code de la réponse = id)
   const q1AnswerCode = dynamicAnswers?.['Q1']?.[0];
 
   // Appel B : Charger le parcours (seulement après réponse Q1)
@@ -36,7 +104,16 @@ export function useDynamicQuestionnaire(rubriqueId: string) {
     queryFn: async () => {
       const res = await fetch(`/api/questionnaire/qn?rubrique_id=${rubriqueId}&q1_answer=${q1AnswerCode}`);
       if (!res.ok) throw new Error('Failed to fetch path questions');
-      return res.json();
+      const apiData: ApiQuestion[] = await res.json();
+
+      // Transformer chaque question du parcours (Q2 à Qn)
+      // L'index commence à 1 car Q1 est déjà passée
+      const questions = apiData.map((q, index) => normalizeQuestion(q, index + 1));
+
+      return {
+        questions,
+        totalQuestions: apiData.length,
+      };
     },
     enabled: !!q1AnswerCode && !!rubriqueId,
   });
@@ -98,9 +175,9 @@ export function useDynamicQuestionnaire(rubriqueId: string) {
     // Progression
     progress,
 
-    // Parcours
-    pathId: pathData?.pathId || null,
-    pathName: pathData?.pathName || null,
+    // Parcours (à implémenter si l'API retourne ces infos)
+    // pathId: null,
+    // pathName: null,
 
     // Actions
     submitAnswer,
