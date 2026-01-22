@@ -21,7 +21,16 @@ interface ContactFormProps {
 
 const ContactForm = ({ selectedSuppliers, onBack }: ContactFormProps) => {
   const router = useRouter();
-  const { userAnswers, profileData, selectedSupplierIds, setContactData } = useFlowStore();
+  const {
+    userAnswers,
+    profileData,
+    selectedSupplierIds,
+    setContactData,
+    files: filesStore, 
+    setFilesStore,
+    addFilesStore
+
+  } = useFlowStore();
   
 
   const leadSubmission = useLeadSubmission({ suppliers: selectedSuppliers });
@@ -104,12 +113,19 @@ const ContactForm = ({ selectedSuppliers, onBack }: ContactFormProps) => {
     if (e.target.files && e.target.files.length > 0) {
       const newFiles = Array.from(e.target.files);
       setFiles(prev => [...prev, ...newFiles]);
+
+      // 2. Mise à jour du store (pour la persistance/soumission)
+      addFilesStore(newFiles);
+
       e.target.value = '';
     }
   };
 
   const removeFile = (index: number) => {
-    setFiles(prev => prev.filter((_, i) => i !== index));
+    const updatedFiles = files.filter((_, i) => i !== index);
+
+    setFiles(updatedFiles);
+    setFilesStore(updatedFiles);
   };
 
   const handleChange = (
@@ -180,11 +196,24 @@ const ContactForm = ({ selectedSuppliers, onBack }: ContactFormProps) => {
       formData.company || profileData?.company?.name
     );
 
-    setContactData(formData);
+    const finalData = { 
+      ...formData, 
+      files: filesStore // On s'assure que les fichiers du store sont inclus
+    };
+
+    finalData.files.forEach((file, index) => {
+      console.log(`Fichier ${index}:`, {
+        nom: file.name,
+        taille: file.size,
+        type: file.type
+      });
+    });
+
+    setContactData(finalData);
 
     // Submit lead
     leadSubmission.mutate({
-      contact: formData,
+      contact: finalData,
       profile: profileData!,
       answers: userAnswers,
       selectedSupplierIds: selectedSupplierIds,

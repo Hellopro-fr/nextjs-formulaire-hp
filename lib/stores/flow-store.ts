@@ -21,6 +21,11 @@ export interface FlowState {
   // Timestamp de début (pour tracking)
   startTime: number | null;
 
+  files: File[]; 
+  
+  setFilesStore: (files: File[]) => void;
+  addFilesStore: (newFiles: File[]) => void;
+
   // Actions
   setUserAnswers: (answers: Record<number, string[]>) => void;
   setOtherTexts: (texts: Record<number, string>) => void;
@@ -44,6 +49,7 @@ const initialState = {
   contactData: null,
   selectedSupplierIds: [],
   startTime: null,
+  files: [],
 };
 
 export const useFlowStore = create<FlowState>()(
@@ -85,6 +91,11 @@ export const useFlowStore = create<FlowState>()(
 
       setContactData: (data) => set({ contactData: data }),
 
+      setFilesStore: (files) => set({ files }),
+      addFilesStore: (newFiles) => set((state) => ({ 
+        files: [...state.files, ...newFiles] 
+      })),
+
       setSelectedSupplierIds: (ids) => set({ selectedSupplierIds: ids }),
 
       toggleSupplier: (supplierId) =>
@@ -104,6 +115,12 @@ export const useFlowStore = create<FlowState>()(
     {
       name: 'flow-storage',
       storage: createJSONStorage(() => sessionStorage),
+      // ✅ AJOUT IMPORTANT : partialize
+      // On exclut 'files' de la persistance car un objet File ne se JSON.stringify pas.
+      partialize: (state) => {
+        const { files, ...rest } = state;
+        return rest;
+      },
     }
   )
 );
