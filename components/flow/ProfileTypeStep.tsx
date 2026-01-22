@@ -402,6 +402,7 @@ const ProfileTypeStep = ({ priorityCountries, otherCountries, onComplete, onBack
                                     setShowManualPostalCodeSuggestions(newPostalCode.length >= 1);
                                   }}
                                   onFocus={() => manualPostalCode.length >= 2 && setShowManualPostalCodeSuggestions(true)}
+                                  onBlur={() => {setTimeout(() => setShowManualPostalCodeSuggestions(false), 200);}}
                                   placeholder="75001"
                                   className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                                 />
@@ -517,6 +518,7 @@ const ProfileTypeStep = ({ priorityCountries, otherCountries, onComplete, onBack
                               console.log("New postal code:", showPostalCodeSuggestions);
                             }}
                             onFocus={() => postalCode.length >= 2 && setShowPostalCodeSuggestions(true)}
+                            onBlur={() => {setTimeout(() => setShowPostalCodeSuggestions(false), 200);}}
                             placeholder="75001"
                             className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                           />
@@ -793,6 +795,7 @@ const ProfileTypeStep = ({ priorityCountries, otherCountries, onComplete, onBack
                                 setShowParticulierPostalCodeSuggestions(true);
                               }}
                               onFocus={() => particulierPostalCode.length >= 2 && setShowParticulierPostalCodeSuggestions(true)}
+                              onBlur={() => {setTimeout(() => setShowParticulierPostalCodeSuggestions(false), 200);}}
                               placeholder="75001"
                               className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                             />
