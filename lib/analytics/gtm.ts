@@ -287,45 +287,50 @@ export function trackProfileComplete(
 }
 
 /**
- * Track l'affichage de la page de sélection fournisseurs
+ * Track l'affichage de la page de sélection produits
  */
 export function trackSelectionPageView(recommendedCount: number, totalCount: number) {
   currentStepIndex++;
-  trackQuoteFunnel(currentStepIndex, 'selection-fournisseurs', 'selection', {
+  trackQuoteFunnel(currentStepIndex, 'selection-produits', 'selection', {
     recommended_count: recommendedCount,
     total_count: totalCount,
   });
 }
 
 /**
- * Track le clic sur une carte fournisseur
+ * Track le clic sur une carte produit
  */
-export function trackSupplierCardClick(
-  supplierId: string,
-  supplierName: string,
+export function trackProductCardClick(
+  productId: string,
+  productName: string,
   matchScore: number,
   action: 'view_details' | 'toggle_select'
 ) {
-  trackQuoteFunnel(currentStepIndex, 'supplier-click', 'selection', {
-    supplier_id: supplierId,
-    supplier_name: supplierName,
+  trackQuoteFunnel(currentStepIndex, 'product-click', 'selection', {
+    product_id: productId,
+    product_name: productName,
     match_score: matchScore,
     action,
   });
 }
 
 /**
- * Track le changement de sélection fournisseur
+ * Track le changement de sélection produit
  */
-export function trackSupplierSelectionChange(
-  supplierId: string,
+export function trackProductSelectionChange(
+  productId: string,
   action: 'add' | 'remove',
   totalSelected: number
 ) {
-  trackQuoteFunnel(currentStepIndex, 'supplier-selection', 'selection', {
-    supplier_id: supplierId,
+  // Vérifier si c'est la première action de ce type pour cet utilisateur dans la session
+  const actionKey = `product_selection_${action}`;
+  const isFirstActionOfType = isFirstView(actionKey);
+
+  trackQuoteFunnel(currentStepIndex, 'product-selection', 'selection', {
+    product_id: productId,
     action,
     total_selected: totalSelected,
+    is_first_action: isFirstActionOfType,
   });
 }
 

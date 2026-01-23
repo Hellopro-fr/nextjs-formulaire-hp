@@ -95,26 +95,27 @@ Cet événement unique track toute la progression de l'utilisateur dans le funne
 }
 ```
 
-#### Sélection fournisseurs
+#### Sélection produits
 | step_name | step_type | Description |
 |-----------|-----------|-------------|
-| `selection-fournisseurs` | `selection` | Affichage page sélection |
-| `supplier-click` | `selection` | Clic sur carte fournisseur |
-| `supplier-selection` | `selection` | Changement sélection |
+| `selection-produits` | `selection` | Affichage page sélection |
+| `product-click` | `selection` | Clic sur carte produit |
+| `product-selection` | `selection` | Changement sélection |
 | `comparison-modal` | `selection` | Ouverture modal comparaison |
 
 **Données additionnelles :**
 ```javascript
 {
-  recommended_count: number,  // Nombre de fournisseurs recommandés
-  total_count: number,        // Nombre total de fournisseurs
-  supplier_id: string,        // ID fournisseur
-  supplier_name: string,      // Nom fournisseur
+  recommended_count: number,  // Nombre de produits recommandés
+  total_count: number,        // Nombre total de produits
+  product_id: string,         // ID produit
+  product_name: string,       // Nom produit
   match_score: number,        // Score de correspondance
   action: string,             // 'view_details' | 'toggle_select' | 'add' | 'remove'
-  total_selected: number,     // Nombre de fournisseurs sélectionnés
-  suppliers_compared: string[], // IDs des fournisseurs comparés
-  suppliers_count: number     // Nombre de fournisseurs comparés
+  total_selected: number,     // Nombre de produits sélectionnés
+  is_first_action: boolean,   // Première action add/remove de la session (pour déduplication)
+  products_compared: string[], // IDs des produits comparés
+  products_count: number      // Nombre de produits comparés
 }
 ```
 
@@ -357,8 +358,8 @@ Sources de trafic (paramètres UTM).
 | `trackProfileTypeSelected(type)` | Sélection type profil |
 | `trackProfileComplete(type, hasCompany, countryId, location)` | Profil complété |
 | `trackSelectionPageView(recommended, total)` | Page sélection |
-| `trackSupplierCardClick(id, name, score, action)` | Clic fournisseur |
-| `trackSupplierSelectionChange(id, action, total)` | Sélection changée |
+| `trackProductCardClick(id, name, score, action)` | Clic produit |
+| `trackProductSelectionChange(id, action, total)` | Sélection changée |
 | `trackComparisonModalView(ids)` | Modal comparaison |
 | `trackContactFormView(count)` | Formulaire contact |
 | `trackContactFieldFilled(name, index)` | Champ rempli |
@@ -425,7 +426,7 @@ Sources de trafic (paramètres UTM).
    → devis_funnel_formulaire { step_name: 'profile-complete', step_type: 'choix-propart' }
 
 7. trackSelectionPageView(5, 12)
-   → devis_funnel_formulaire { step_name: 'selection-fournisseurs', step_type: 'selection' }
+   → devis_funnel_formulaire { step_name: 'selection-produits', step_type: 'selection' }
 
 8. trackContactFormView(3)
    → devis_funnel_formulaire { step_name: 'formulaire-contact', step_type: 'contact' }
@@ -433,3 +434,30 @@ Sources de trafic (paramètres UTM).
 9. trackLeadSubmitted('lead_123', 3, 'professional')
    → devis_funnel_formulaire { step_name: 'submit-success', step_type: 'conversion', conversion: true }
 ```
+
+---
+
+## KPIs et Requêtes GTM/GA4
+
+### Funnel Principal
+
+| KPI | Événement | Filtre |
+|-----|-----------|--------|
+| Nb arrivée funnel | `devis_funnel_formulaire` | `step_name = 'funnel-start'` |
+| Nb arrivée Q1 (Q2 ancienne UX) | `devis_funnel_formulaire` | `step_name = '1ere-question'` |
+| Nb arrivée Pro/Part | `devis_funnel_formulaire` | `step_name = 'choix-propart'` |
+| Nb arrivée sélection | `devis_funnel_formulaire` | `step_name = 'selection-produits'` |
+| Nb arrivée form coordonnées | `devis_funnel_formulaire` | `step_name = 'formulaire-contact'` |
+| Nb leads validés | `devis_funnel_formulaire` | `step_name = 'submit-success'` |
+
+### Événements Secondaires (avec déduplication)
+
+| KPI | Événement | Total | Dédupliqué (unique) |
+|-----|-----------|-------|---------------------|
+| Affichage modifier critères | `page_vue_critere` | COUNT(*) | COUNT(*) WHERE `is_first_view = true` |
+| Affichage besoin différent | `vue_page_votre_besoin` | COUNT(*) | COUNT(*) WHERE `is_first_view = true` |
+| Affichage tableau comparatif | `comparison-modal` | COUNT(*) | COUNT(*) WHERE `is_first_view = true` |
+| Affichage popup produit | `vue_modal_produit` | COUNT(*) | COUNT(*) WHERE `is_first_view = true` |
+| Clics ajouter sélection | `product-selection` | COUNT(*) WHERE `action = 'add'` | COUNT(*) WHERE `action = 'add'` AND `is_first_action = true` |
+| Clics retirer sélection | `product-selection` | COUNT(*) WHERE `action = 'remove'` | COUNT(*) WHERE `action = 'remove'` AND `is_first_action = true` |
+| Modification effective critères | `critere_modifie` | COUNT(*) | COUNT(DISTINCT user_id) |
