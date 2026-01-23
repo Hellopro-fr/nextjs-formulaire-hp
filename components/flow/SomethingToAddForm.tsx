@@ -4,10 +4,14 @@ import { ArrowRight, Paperclip, X, Mic, MicOff, ArrowLeft, Send, Shield, Clock, 
 import { useState, useRef, useEffect, useMemo } from "react";
 import ProgressHeader from "./ProgressHeader";
 import CountryCodeSelect from "./CountryCodeSelect";
+<<<<<<< HEAD
 import { useBuyerCheck } from "@/hooks/api";
 import { useFlowStore } from "@/lib/stores/flow-store";
 import { ContactFormData } from "@/types";
 import PhoneInput from "./PhoneInput";
+=======
+import { trackCustomNeedPageView, trackCustomNeedContactView } from "@/lib/analytics";
+>>>>>>> f50a89a785739bd9e589ea43186d91ab2030ff10
 
 // Mock list of existing buyers in database
 const EXISTING_BUYERS = [
@@ -50,6 +54,17 @@ const SomethingToAddForm = ({ onNext, onBack }: SomethingToAddFormProps) => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
   
+
+  // Ref pour éviter les doubles appels en StrictMode
+  const hasTrackedPageView = useRef(false);
+
+  // Track page view au montage
+  useEffect(() => {
+    if (!hasTrackedPageView.current) {
+      hasTrackedPageView.current = true;
+      trackCustomNeedPageView();
+    }
+  }, []);
 
   // Check if email is from an existing buyer
   // const isExistingBuyer = useMemo(() => {
@@ -214,6 +229,7 @@ const SomethingToAddForm = ({ onNext, onBack }: SomethingToAddFormProps) => {
 
   const goToNextStep = () => {
     setCurrentStep(2);
+    trackCustomNeedContactView();
   };
 
   const goToPreviousStep = () => {

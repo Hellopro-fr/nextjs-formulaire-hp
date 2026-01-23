@@ -146,11 +146,11 @@ export function getFunnelContext(): FunnelContext {
 }
 
 // =============================================================================
-// ÉVÉNEMENT PRINCIPAL : quote_form_funnel
+// ÉVÉNEMENT PRINCIPAL : devis_funnel_formulaire
 // =============================================================================
 
 /**
- * Track une étape du funnel avec l'événement unique quote_form_funnel
+ * Track une étape du funnel avec l'événement unique devis_funnel_formulaire
  */
 export function trackQuoteFunnel(
   stepIndex: number,
@@ -161,7 +161,7 @@ export function trackQuoteFunnel(
   const userId = getUserId();
   const sessionId = getSessionId();
 
-  pushToDataLayer('quote_form_funnel', {
+  pushToDataLayer('devis_funnel_formulaire', {
     // Progression
     step_index: stepIndex,
     step_name: stepName,
@@ -417,7 +417,7 @@ export function trackLeadSubmissionError(errorType: string, errorMessage: string
  * Track la recherche d'entreprise
  */
 export function trackCompanySearch(query: string, resultsCount: number) {
-  pushToDataLayer('company_search', {
+  pushToDataLayer('recherche_entreprise', {
     query_length: query.length,
     results_count: resultsCount,
   });
@@ -431,7 +431,7 @@ export function trackModifyCriteriaModalView() {
   const sessionId = getSessionId();
   const isFirstViewForSession = isFirstView('modify_criteria_modal');
 
-  pushToDataLayer('modify_criteria_modal_view', {
+  pushToDataLayer('page_vue_critere', {
     user_id: userId,
     session_id: sessionId,
     is_first_view: isFirstViewForSession,
@@ -445,7 +445,7 @@ export function trackModifyCriteriaModalView() {
 export function trackCriteriaModified(criteriaCount: number, modifiedFields: string[]) {
   const userId = getUserId();
 
-  pushToDataLayer('criteria_modified', {
+  pushToDataLayer('critere_modifie', {
     user_id: userId,
     criteria_count: criteriaCount,
     modified_fields: modifiedFields,
@@ -454,17 +454,32 @@ export function trackCriteriaModified(criteriaCount: number, modifiedFields: str
 }
 
 /**
- * Track l'ouverture du modal "Autre chose à ajouter"
+ * Track l'arrivée sur la page "Quelque chose à ajouter" (/something-to-add) - Étape 1: Votre besoin
+ * Cette page s'affiche quand il y a peu de produits correspondant à la recherche
  */
-export function trackCustomNeedModalView() {
+export function trackCustomNeedPageView() {
   const userId = getUserId();
   const sessionId = getSessionId();
-  const isFirstViewForSession = isFirstView('custom_need_modal');
+  const isFirstViewForSession = isFirstView('custom_need_page');
 
-  pushToDataLayer('custom_need_modal_view', {
+  pushToDataLayer('vue_page_votre_besoin', {
     user_id: userId,
     session_id: sessionId,
     is_first_view: isFirstViewForSession,
+    timestamp: new Date().toISOString(),
+  });
+}
+
+/**
+ * Track l'affichage de l'étape coordonnées sur /something-to-add - Étape 2: Vos coordonnées
+ */
+export function trackCustomNeedContactView() {
+  const userId = getUserId();
+  const sessionId = getSessionId();
+
+  pushToDataLayer('vue_page_vos_coordonnees', {
+    user_id: userId,
+    session_id: sessionId,
     timestamp: new Date().toISOString(),
   });
 }
@@ -478,7 +493,7 @@ export function trackProductModalView(productId: string, productName: string, su
   const modalKey = `product_modal_${productId}`;
   const isFirstViewForSession = isFirstView(modalKey);
 
-  pushToDataLayer('product_modal_view', {
+  pushToDataLayer('vue_modal_produit', {
     user_id: userId,
     session_id: sessionId,
     is_first_view: isFirstViewForSession,
@@ -496,7 +511,7 @@ export function identifyUser(email: string, profileType?: string, companyName?: 
   const userId = getUserId();
   const sessionId = getSessionId();
 
-  pushToDataLayer('user_identified', {
+  pushToDataLayer('utilisateur_identifie', {
     user_id: userId,
     session_id: sessionId,
     email,
@@ -519,7 +534,7 @@ export function trackFunnelAbandonment(
   const sessionId = getSessionId();
   const deviceInfo = getDeviceInfo();
 
-  pushToDataLayer('funnel_abandonment', {
+  pushToDataLayer('abandon_funnel', {
     user_id: userId,
     session_id: sessionId,
     step,
@@ -564,7 +579,7 @@ export function trackTrafficSource() {
   const content = urlParams.get('utm_content') || '';
   const referrer = document.referrer || 'direct';
 
-  pushToDataLayer('traffic_source', {
+  pushToDataLayer('source_trafic', {
     user_id: userId,
     session_id: sessionId,
     utm_source: source,
