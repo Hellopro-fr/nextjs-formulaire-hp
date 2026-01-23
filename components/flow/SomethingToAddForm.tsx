@@ -4,6 +4,10 @@ import { ArrowRight, Paperclip, X, Mic, MicOff, ArrowLeft, Send, Shield, Clock, 
 import { useState, useRef, useEffect, useMemo } from "react";
 import ProgressHeader from "./ProgressHeader";
 import CountryCodeSelect from "./CountryCodeSelect";
+import { useBuyerCheck } from "@/hooks/api";
+import { useFlowStore } from "@/lib/stores/flow-store";
+import { ContactFormData } from "@/types";
+import PhoneInput from "./PhoneInput";
 
 // Mock list of existing buyers in database
 const EXISTING_BUYERS = [
@@ -24,11 +28,19 @@ const STEPS = [
 ];
 
 const SomethingToAddForm = ({ onNext, onBack }: SomethingToAddFormProps) => {
+
+   const {
+    setContactData,
+    files: filesStore,     
+    addFilesStore
+  } = useFlowStore();
+
   const [currentStep, setCurrentStep] = useState(1);
   const [description, setDescription] = useState("");
   const [fileName, setFileName] = useState<string | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [isListening, setIsListening] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<ContactFormData>({
     email: "",
     firstName: "",
     lastName: "",
@@ -37,14 +49,15 @@ const SomethingToAddForm = ({ onNext, onBack }: SomethingToAddFormProps) => {
   });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
+  
 
   // Check if email is from an existing buyer
-  const isExistingBuyer = useMemo(() => {
-    if (!formData.email || formData.email.length < 5) return false;
-    return EXISTING_BUYERS.some(
-      (email) => email.toLowerCase() === formData.email.toLowerCase()
-    );
-  }, [formData.email]);
+  // const isExistingBuyer = useMemo(() => {
+  //   if (!formData.email || formData.email.length < 5) return false;
+  //   return EXISTING_BUYERS.some(
+  //     (email) => email.toLowerCase() === formData.email.toLowerCase()
+  //   );
+  // }, [formData.email]);
 
   // Check if email is valid format
   const isEmailValid = useMemo(() => {
@@ -52,12 +65,65 @@ const SomethingToAddForm = ({ onNext, onBack }: SomethingToAddFormProps) => {
     return emailRegex.test(formData.email);
   }, [formData.email]);
 
+    // Dynamic buyer check via API
+  const { data: buyerCheckResult } = useBuyerCheck(
+    {
+      email     : formData.email,
+      rubriqueId: '2001661',
+    },
+    isEmailValid
+  );
+
+  const isExistingBuyer = buyerCheckResult?.isDuplicate || false;
+  const isKnownBuyer    = buyerCheckResult?.isKnown || false;
+
+  useEffect(() => {
+      let updatedData: ContactFormData | null = null;
+  
+      // 1. On vérifie si l'acheteur est reconnu et si on a les données
+      if (isKnownBuyer && buyerCheckResult?.infoBuyer) {
+        const info = buyerCheckResult.infoBuyer as any;
+  
+        // 2. On prépare l'objet complet avec les clés de votre interface ContactFormData
+        updatedData = {
+          ...formData,                   // On garde le message et les autres champs
+          email    : formData.email,      // L'email déjà saisi
+          firstName: info.prenom || "",
+          lastName : info.nom || "",
+          phone    : info.tel || "",
+        
+        };
+              
+      }else{
+        updatedData = {
+          ...formData, 
+          email      : formData.email,
+          firstName  : "",
+          lastName   : "",
+          phone      : "",
+          countryCode: "",
+        };
+      }
+  
+      if (updatedData) {
+        setFormData(updatedData);
+      }
+      
+      // On ne déclenche cet effet que lorsque 'isKnownBuyer' ou 'infoBuyer' change
+    }, [isKnownBuyer, buyerCheckResult?.infoBuyer]);  
+
   // Show additional fields only if email is valid and not an existing buyer
-  const showAdditionalFields = isEmailValid && !isExistingBuyer;
+  const showAdditionalFields = isEmailValid && !isKnownBuyer;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setFileName(e.target.files[0].name);
+    if (e.target.files && e.target.files.length > 0) {
+      const newFiles = Array.from(e.target.files);
+      setFiles(prev => [...prev, ...newFiles]);
+
+      // 2. Mise à jour du store (pour la persistance/soumission)
+      addFilesStore(newFiles);
+
+      e.target.value = '';
     }
   };
 
@@ -69,7 +135,24 @@ const SomethingToAddForm = ({ onNext, onBack }: SomethingToAddFormProps) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
     console.log("Form submitted:", { description, fileName, ...formData });
+
+     const finalData = { 
+      ...formData, 
+      files: filesStore, // On s'assure que les fichiers du store sont inclus
+      message: description
+    };
+
+    finalData.files.forEach((file, index) => {
+      console.log(`Fichier ${index}:`, {
+        nom: file.name,
+        taille: file.size,
+        type: file.type
+      });
+    });
+
+    setContactData(finalData);
     onNext();
   };
 
@@ -240,9 +323,10 @@ const SomethingToAddForm = ({ onNext, onBack }: SomethingToAddFormProps) => {
                     <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-input bg-background px-4 py-5 text-muted-foreground hover:border-primary/50 hover:bg-secondary/50 transition-all">
                       <Paperclip className="h-5 w-5" />
                       <span className="text-sm">
-                        {fileName
-                          ? fileName
-                          : "Ajouter un document (cahier des charges, photo...)"}
+                        {files.length > 0 
+                          ? files.map(f => f.name).join(", ") 
+                          : "Ajouter un document (cahier des charges, photo...)"
+                        }
                       </span>
                       <input
                         type="file"
@@ -317,10 +401,16 @@ const SomethingToAddForm = ({ onNext, onBack }: SomethingToAddFormProps) => {
                       className="w-full rounded-lg border border-input bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                       placeholder="vous@entreprise.com"
                     />
-                    {isExistingBuyer && (
+                    {isKnownBuyer && (
                       <div className="mt-2 flex items-center gap-2 text-sm text-green-600">
                         <CheckCircle className="h-4 w-4" />
                         <span>Nous vous avons reconnu ! Vos informations sont pré-enregistrées.</span>
+                      </div>
+                    )}
+                    {isExistingBuyer && buyerCheckResult?.message && (
+                      <div className="mt-2 flex items-center gap-2 text-sm text-orange-600">
+                        <Shield className="h-4 w-4" />
+                        <span>{buyerCheckResult.message}</span>
                       </div>
                     )}
                   </div>
@@ -371,23 +461,15 @@ const SomethingToAddForm = ({ onNext, onBack }: SomethingToAddFormProps) => {
                           className="block text-sm font-medium text-foreground mb-1.5"
                         >
                           Téléphone *
-                        </label>
-                        <div className="flex gap-2">
-                          <CountryCodeSelect
-                            value={formData.countryCode}
-                            onChange={(value) => setFormData({ ...formData, countryCode: value })}
-                          />
-                          <input
-                            type="tel"
-                            id="phone"
-                            name="phone"
-                            required
-                            value={formData.phone}
-                            onChange={handleChange}
-                            className="flex-1 rounded-lg border border-input bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-                            placeholder="6 12 34 56 78"
-                          />
-                        </div>
+                        </label>                        
+                        <PhoneInput
+                          value={formData.phone}
+                          countryCode={formData.countryCode || "+33"}
+                          onValueChange={(phone) => setFormData({ ...formData, phone })}
+                          onCountryCodeChange={(code) => setFormData({ ...formData, countryCode: code })}
+                          // error={errors.phone}
+                          required
+                        />
                       </div>
                     </>
                   )}

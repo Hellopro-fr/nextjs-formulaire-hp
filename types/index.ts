@@ -114,7 +114,7 @@ export interface ContactFormData {
   company?: string;
   countryCode?: string;
   phone: string;
-  message: string;
+  message?: string;
 }
 
 export interface LeadSubmission {
