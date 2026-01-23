@@ -38,14 +38,6 @@ const STEPS = [
   { id: 3, label: "Demande de devis" },
 ];
 
-const CRITERIA = [
-  "Pont 2 colonnes",
-  "4T",
-  "Traverse supérieure",
-  "400V",
-  "Île-de-France",
-];
-
 const RECOMMENDED_SUPPLIERS: Supplier[] = [
   {
     id: "1",
@@ -601,7 +593,15 @@ const SupplierSelectionModal = ({ userAnswers, onBackToQuestionnaire }: Supplier
               </div>
               {/* Criteria Tags */}
               <CriteriaTags
-                criteria={CRITERIA}
+                essentialCriteria={[
+                  { label: "Type", value: "2 colonnes" },
+                  { label: "Capacité", value: "4 tonnes" },
+                  { label: "Alimentation", value: "400V triphasé" },
+                ]}
+                secondaryCriteria={[
+                  { label: "Traverse", value: "Oui" },
+                  { label: "Zone", value: "Île-de-France" },
+                ]}
                 onModify={() => {
                   setViewState("modify-criteria");
                   setCriteriaModified(true);

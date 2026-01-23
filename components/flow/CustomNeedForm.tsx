@@ -3,7 +3,7 @@
 import { ArrowLeft, ArrowRight, Paperclip, Send, UserCheck, X, Mic, MicOff, Shield, Clock, CheckCircle } from "lucide-react";
 import { useState, useRef, useEffect, useMemo } from "react";
 import CountryCodeSelect from "./CountryCodeSelect";
-import { trackCustomNeedModalView } from "@/lib/analytics";
+import { trackCustomNeedPageView, trackCustomNeedContactView } from "@/lib/analytics";
 
 // Mock list of existing buyers in database
 const EXISTING_BUYERS = [
@@ -67,10 +67,16 @@ const CustomNeedForm = ({ onBack }: CustomNeedFormProps) => {
     onBack();
   };
 
-  // Track modal view on mount + Initialize Speech Recognition
+  // Ref pour éviter les doubles appels en StrictMode
+  const hasTrackedView = useRef(false);
+
+  // Track view on mount + Initialize Speech Recognition
   useEffect(() => {
-    // Track modal view (only once per session)
-    trackCustomNeedModalView();
+    // Track view (only once)
+    if (!hasTrackedView.current) {
+      hasTrackedView.current = true;
+      trackCustomNeedPageView();
+    }
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
@@ -128,6 +134,7 @@ const CustomNeedForm = ({ onBack }: CustomNeedFormProps) => {
 
   const goToNextStep = () => {
     setCurrentStep(2);
+    trackCustomNeedContactView();
   };
 
   const goToPreviousStep = () => {
