@@ -52,7 +52,7 @@ export default function QuestionnaireClient({
   return (
     <NeedsQuestionnaire
       onComplete={handleComplete}
-      rubriqueId='2007702'
+      rubriqueId={initialCategoryId}
     />
   );
 }

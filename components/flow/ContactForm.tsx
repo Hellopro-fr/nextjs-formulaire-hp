@@ -22,6 +22,7 @@ interface ContactFormProps {
 const ContactForm = ({ selectedSuppliers, onBack }: ContactFormProps) => {
   const router = useRouter();
   const {
+    categoryId,
     userAnswers,
     profileData,
     selectedSupplierIds,
@@ -63,7 +64,7 @@ const ContactForm = ({ selectedSuppliers, onBack }: ContactFormProps) => {
   const { data: buyerCheckResult } = useBuyerCheck(
     {
       email     : formData.email,
-      rubriqueId: '2001661',
+      rubriqueId: categoryId?.toString(),
     },
     isEmailValid
   );
