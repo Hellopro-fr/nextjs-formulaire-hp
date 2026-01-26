@@ -4,28 +4,44 @@ import { useEffect, useRef } from 'react';
 import { useFlowStore } from '@/lib/stores/flow-store';
 
 /**
- * Composant qui vide le store Zustand (sessionStorage) à chaque chargement de page.
- * Cela garantit que l'utilisateur recommence toujours un funnel vierge après un F5.
+ * Composant qui vide le store Zustand (sessionStorage) uniquement lors d'un vrai
+ * rechargement de page (F5, ouverture d'un nouvel onglet, etc.).
  *
- * Note: On utilise un flag pour éviter les doubles resets en StrictMode
- * et on vide le sessionStorage AVANT l'hydratation de Zustand.
+ * La navigation client-side (router.push) ne déclenche PAS de reset.
+ *
+ * Utilise performance.navigation.type ou PerformanceNavigationTiming pour
+ * détecter le type de navigation.
  */
 export default function FlowStorageReset() {
-  const hasReset = useRef(false);
   const reset = useFlowStore((state) => state.reset);
+  const hasChecked = useRef(false);
 
-  // Vider le sessionStorage immédiatement (avant hydratation Zustand)
   useEffect(() => {
-    if (hasReset.current) return;
-    hasReset.current = true;
+    // Ne s'exécuter qu'une seule fois par montage du composant
+    if (hasChecked.current) return;
+    hasChecked.current = true;
 
-    // Supprimer directement la clé du sessionStorage pour éviter la réhydratation
-    if (typeof window !== 'undefined') {
-      sessionStorage.removeItem('flow-storage');
+    if (typeof window === 'undefined') return;
+
+    // Détecter le type de navigation
+    let navigationType: string | undefined;
+
+    // Méthode moderne: PerformanceNavigationTiming
+    const navEntries = performance.getEntriesByType('navigation') as PerformanceNavigationTiming[];
+    if (navEntries.length > 0) {
+      navigationType = navEntries[0].type;
     }
 
-    // Puis reset le store Zustand
-    reset();
+    const hasInitialized = sessionStorage.getItem('flow-initialized') === 'true';
+
+    if (!hasInitialized) {
+      sessionStorage.removeItem('flow-storage');
+      reset();
+      sessionStorage.setItem('flow-initialized', 'true');
+    } else if (navigationType === 'reload') {
+      sessionStorage.removeItem('flow-storage');
+      reset();
+    }
   }, [reset]);
 
   return null;

@@ -21,7 +21,6 @@ export default function QuestionnaireClient({
   // Récupérer et stocker le categoryId
   // Priorité : props du Server Component > searchParams client
   useEffect(() => {
-    // Props passées depuis le Server Component (middleware rewrite)
     let categoryId = initialCategoryId;
 
     // Fallback: searchParams côté client (pour navigation interne)
@@ -29,16 +28,9 @@ export default function QuestionnaireClient({
       categoryId = searchParams.get('categoryId') || searchParams.get('id_categorie') || undefined;
     }
 
-    console.log('[QuestionnaireClient] categoryId:', {
-      fromServerProps: initialCategoryId,
-      fromSearchParams: searchParams.get('categoryId') || searchParams.get('id_categorie'),
-      final: categoryId,
-    });
-
     if (categoryId) {
       const id = parseInt(categoryId, 10);
       if (!isNaN(id) && id > 0) {
-        console.log('[QuestionnaireClient] Setting categoryId:', id);
         setCategoryId(id);
       }
     }
