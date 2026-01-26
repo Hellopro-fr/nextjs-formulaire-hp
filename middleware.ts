@@ -7,9 +7,10 @@ import type { NextRequest } from 'next/server';
 
 // Mapping des routes tokenisées vers les routes réelles
 const ROUTE_MAPPING: Record<string, string> = {
-  '/questionnaire': '/',           // /questionnaire/TOKEN → / (page d'accueil avec questionnaire)
-  '/selection': '/selection',       // /selection/TOKEN → /selection
-  '/formulaire': '/contact-simple', // /formulaire/TOKEN → /contact-simple
+  '/questionnaire': '/',                    // /questionnaire/TOKEN → / (page d'accueil avec questionnaire)
+  '/selection': '/selection',               // /selection/TOKEN → /selection
+  '/formulaire': '/contact-simple',         // /formulaire/TOKEN → /contact-simple
+  '/something-to-add': '/selection',        // /something-to-add/TOKEN → /selection (redirection par défaut)
 };
 
 // Routes qui nécessitent un token de catégorie valide
@@ -124,6 +125,14 @@ export async function middleware(request: NextRequest) {
     return NextResponse.rewrite(rewriteUrl);
   }
 
+  // TODO: SUPPRIMER AVANT MISE EN PROD - Bypass complet en dev pour navigation interne
+  // Laisser passer les requêtes RSC (React Server Components) et navigation interne
+  const isRscRequest = searchParams.has('_rsc');
+  const hasNoToken = pathname.split('/').filter(Boolean).length === 1; // ex: /selection sans token
+  if (isRscRequest || hasNoToken) {
+    return NextResponse.next();
+  }
+
   // Vérifier si la route est protégée
   const isProtectedRoute = PROTECTED_ROUTES.some((route) =>
     pathname.startsWith(route)
@@ -176,5 +185,6 @@ export const config = {
     '/questionnaire/:token*',
     '/selection/:token*',
     '/formulaire/:token*',
+    '/something-to-add/:token*',
   ],
 };
