@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { useEffect, useState } from 'react';
 import type { ContactFormData, ProfileData, UserAnswers } from '@/types';
 
 export interface FlowState {
@@ -141,3 +142,38 @@ export const selectHasCompletedProfile = (state: FlowState) =>
 
 export const selectTimeSpentSeconds = (state: FlowState) =>
   state.startTime ? Math.round((Date.now() - state.startTime) / 1000) : 0;
+
+// =============================================================================
+// HYDRATION HOOK - Attendre que le store soit hydraté depuis sessionStorage
+// =============================================================================
+
+/**
+ * Hook pour attendre l'hydratation du store Zustand
+ * Utiliser ce hook avant d'accéder aux données persistées
+ *
+ * @example
+ * const isHydrated = useFlowStoreHydration();
+ * if (!isHydrated) return <Loading />;
+ * // Maintenant dynamicAnswers contient les vraies données
+ */
+export const useFlowStoreHydration = () => {
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  useEffect(() => {
+    // onFinishHydration est appelé quand le store est hydraté
+    const unsubFinishHydration = useFlowStore.persist.onFinishHydration(() => {
+      setIsHydrated(true);
+    });
+
+    // Si déjà hydraté (ex: navigation client-side), mettre à jour immédiatement
+    if (useFlowStore.persist.hasHydrated()) {
+      setIsHydrated(true);
+    }
+
+    return () => {
+      unsubFinishHydration();
+    };
+  }, []);
+
+  return isHydrated;
+};
