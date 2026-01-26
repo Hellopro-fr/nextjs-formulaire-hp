@@ -21,18 +21,32 @@ const PROTECTED_ROUTES = Object.keys(ROUTE_MAPPING);
 const INVALID_TOKEN_REDIRECT = process.env.INVALID_TOKEN_REDIRECT_URL || 'https://www.hellopro.fr/categories';
 
 // =============================================================================
-// TOKEN VALIDATION (inline pour éviter les imports dans Edge Runtime)
+// TOKEN VALIDATION - AES-256-CBC (inline pour éviter les imports dans Edge Runtime)
 // =============================================================================
 
-function base64UrlDecode(str: string): string {
+/**
+ * Décode un string Base64 URL-safe en Uint8Array
+ */
+function base64UrlDecodeToBytes(str: string): Uint8Array {
+  // Convertir Base64 URL-safe en Base64 standard
   let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
   const padding = base64.length % 4;
   if (padding) {
     base64 += '='.repeat(4 - padding);
   }
-  return atob(base64);
+
+  // Décoder Base64 en string binaire puis en bytes
+  const binaryStr = atob(base64);
+  const bytes = new Uint8Array(binaryStr.length);
+  for (let i = 0; i < binaryStr.length; i++) {
+    bytes[i] = binaryStr.charCodeAt(i);
+  }
+  return bytes;
 }
 
+/**
+ * Vérifie si la date est valide (hier <= date < demain)
+ */
 function isDateValid(dateStr: string): boolean {
   const tokenDate = new Date(dateStr);
   const today = new Date();
@@ -47,62 +61,67 @@ function isDateValid(dateStr: string): boolean {
   return tokenDate >= yesterday && tokenDate < maxDate;
 }
 
+/**
+ * Déchiffre un token AES-256-CBC
+ * Format du token: Base64URL(IV[16 bytes] + EncryptedData)
+ */
 async function validateTokenInMiddleware(
   token: string,
   secret: string
 ): Promise<{ valid: boolean; categoryId?: number; error?: string }> {
-  const parts = token.split('.');
-  if (parts.length !== 2) {
-    return { valid: false, error: 'invalid_format' };
-  }
-
-  const [encodedPayload, providedSignature] = parts;
-
-  let payloadStr: string;
-  let payload: { c: number; d: string; n: string };
-
   try {
-    payloadStr = base64UrlDecode(encodedPayload);
-    payload = JSON.parse(payloadStr);
-  } catch {
-    return { valid: false, error: 'invalid_payload' };
+    // 1. Décoder le token Base64 URL-safe en bytes
+    const encryptedData = base64UrlDecodeToBytes(token);
+
+    // 2. Extraire IV (16 premiers bytes) et données chiffrées
+    if (encryptedData.length < 17) {
+      return { valid: false, error: 'invalid_format' };
+    }
+    const iv = encryptedData.slice(0, 16);
+    const ciphertext = encryptedData.slice(16);
+
+    // 3. Dériver la clé AES-256 depuis le secret (SHA-256)
+    const encoder = new TextEncoder();
+    const secretBytes = encoder.encode(secret);
+    const keyHash = await crypto.subtle.digest('SHA-256', secretBytes);
+
+    // 4. Importer la clé pour AES-CBC
+    const key = await crypto.subtle.importKey(
+      'raw',
+      keyHash,
+      { name: 'AES-CBC' },
+      false,
+      ['decrypt']
+    );
+
+    // 5. Déchiffrer
+    const decryptedBuffer = await crypto.subtle.decrypt(
+      { name: 'AES-CBC', iv },
+      key,
+      ciphertext
+    );
+
+    // 6. Convertir en string et parser le JSON
+    const decoder = new TextDecoder();
+    const payloadStr = decoder.decode(decryptedBuffer);
+    const payload: { c: number; d: string; t?: number } = JSON.parse(payloadStr);
+
+    // 7. Vérifier la date d'expiration
+    if (!payload.d || !isDateValid(payload.d)) {
+      return { valid: false, error: 'expired' };
+    }
+
+    // 8. Vérifier le categoryId
+    if (typeof payload.c !== 'number' || payload.c <= 0) {
+      return { valid: false, error: 'invalid_payload' };
+    }
+
+    return { valid: true, categoryId: payload.c };
+  } catch (error) {
+    // Erreur de déchiffrement = token invalide
+    console.error('[Middleware] Token validation error:', error);
+    return { valid: false, error: 'invalid_token' };
   }
-
-  // Vérifier la signature avec Web Crypto API (disponible dans Edge Runtime)
-  const encoder = new TextEncoder();
-  const key = await crypto.subtle.importKey(
-    'raw',
-    encoder.encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-
-  const signatureBuffer = await crypto.subtle.sign(
-    'HMAC',
-    key,
-    encoder.encode(payloadStr)
-  );
-
-  const signatureArray = new Uint8Array(signatureBuffer);
-  const expectedSignature = Array.from(signatureArray)
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('')
-    .substring(0, 16);
-
-  if (providedSignature !== expectedSignature) {
-    return { valid: false, error: 'invalid_signature' };
-  }
-
-  if (!isDateValid(payload.d)) {
-    return { valid: false, error: 'expired' };
-  }
-
-  if (typeof payload.c !== 'number' || payload.c <= 0) {
-    return { valid: false, error: 'invalid_payload' };
-  }
-
-  return { valid: true, categoryId: payload.c };
 }
 
 // =============================================================================
@@ -151,7 +170,7 @@ export async function middleware(request: NextRequest) {
   }
 
   const token = pathParts[1];
-  const secret = process.env.CATEGORY_TOKEN_SECRET || 'hellofr2k26';
+  const secret = process.env.CATEGORY_TOKEN_SECRET;
 
   // Valider le token
   const result = await validateTokenInMiddleware(token, secret);
