@@ -78,8 +78,32 @@ const NeedsQuestionnaire = ({ onComplete, rubriqueId }: NeedsQuestionnaireProps)
     }
   }, [isDynamicMode, dynamicQuestionnaire.isComplete, dynamicQuestionnaire.progress.total, dynamicAnswers, onComplete, startTime]);
 
+  // Hook de tracking de vue (Dynamique ET Statique combinés ou séparés mais TOUJOURS présents)
+  useEffect(() => {
+    if (isDynamicMode) {
+      if (dynamicQuestionnaire.currentQuestion && lastTrackedQuestionIndex.current !== dynamicQuestionnaire.currentIndex) {
+        lastTrackedQuestionIndex.current = dynamicQuestionnaire.currentIndex;
+        trackQuestionView(dynamicQuestionnaire.currentIndex, {
+          question_id: dynamicQuestionnaire.currentQuestion.id,
+          question_title: dynamicQuestionnaire.currentQuestion.title,
+          total_questions: dynamicQuestionnaire.progress.total,
+        });
+      }
+    } else {
+      const currentStatQuestion = QUESTIONS[currentQuestionIndex];
+      if (lastTrackedQuestionIndex.current !== currentQuestionIndex) {
+        lastTrackedQuestionIndex.current = currentQuestionIndex;
+        trackQuestionView(currentQuestionIndex, {
+          question_id: currentStatQuestion.id,
+          question_title: currentStatQuestion.title,
+          total_questions: QUESTIONS.length,
+        });
+      }
+    }
+  }, [isDynamicMode, dynamicQuestionnaire.currentIndex, currentQuestionIndex, dynamicQuestionnaire.currentQuestion]);
+
   // === MODE DYNAMIQUE ===
-  if (isDynamicMode) {
+  if (isDynamicMode) {  
     const {
       currentQuestion,
       currentIndex,
@@ -139,16 +163,16 @@ const NeedsQuestionnaire = ({ onComplete, rubriqueId }: NeedsQuestionnaireProps)
     }
 
     // Track question view en mode dynamique
-    useEffect(() => {
-      if (currentQuestion && lastTrackedQuestionIndex.current !== currentIndex) {
-        lastTrackedQuestionIndex.current = currentIndex;
-        trackQuestionView(currentIndex, {
-          question_id: currentQuestion.id || currentIndex + 1,
-          question_title: currentQuestion.title,
-          total_questions: progress.total,
-        });
-      }
-    }, [currentQuestion, currentIndex, progress.total]);
+    // useEffect(() => {
+    //   if (currentQuestion && lastTrackedQuestionIndex.current !== currentIndex) {
+    //     lastTrackedQuestionIndex.current = currentIndex;
+    //     trackQuestionView(currentIndex, {
+    //       question_id: currentQuestion.id || currentIndex + 1,
+    //       question_title: currentQuestion.title,
+    //       total_questions: progress.total,
+    //     });
+    //   }
+    // }, [currentQuestion, currentIndex, progress.total]);
 
     // Calculate progress for step 1 (0-33%)
     const questionProgress = progress.percent * 0.33;
@@ -226,16 +250,16 @@ const NeedsQuestionnaire = ({ onComplete, rubriqueId }: NeedsQuestionnaireProps)
   const totalQuestions = QUESTIONS.length;
 
   // Track question view quand l'index change (mode statique)
-  useEffect(() => {
-    if (!isDynamicMode && lastTrackedQuestionIndex.current !== currentQuestionIndex) {
-      lastTrackedQuestionIndex.current = currentQuestionIndex;
-      trackQuestionView(currentQuestionIndex, {
-        question_id: currentQuestion.id,
-        question_title: currentQuestion.title,
-        total_questions: totalQuestions,
-      });
-    }
-  }, [isDynamicMode, currentQuestionIndex, currentQuestion, totalQuestions]);
+  // useEffect(() => {
+  //   if (!isDynamicMode && lastTrackedQuestionIndex.current !== currentQuestionIndex) {
+  //     lastTrackedQuestionIndex.current = currentQuestionIndex;
+  //     trackQuestionView(currentQuestionIndex, {
+  //       question_id: currentQuestion.id,
+  //       question_title: currentQuestion.title,
+  //       total_questions: totalQuestions,
+  //     });
+  //   }
+  // }, [isDynamicMode, currentQuestionIndex, currentQuestion, totalQuestions]);
 
   const handleSelectAnswer = (answerId: string, autoAdvance?: boolean) => {
     const currentAnswers = userAnswers[currentQuestion.id] || [];

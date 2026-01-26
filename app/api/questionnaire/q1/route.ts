@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const BASE_URL = process.env.HELLOPRO_API_URL || 'https://www.hellopro.fr';
+// const BASE_URL = process.env.HELLOPRO_API_URL || 'https://www.hellopro.fr';
 
-export async function GET(request: NextRequest) {
+const BASE_URL         = 'https://dev-api.hellopro.fr';
+const URL_API_QUESTION = `${BASE_URL}/v2/index.php`;
+const TOKEN            = process.env.NEXT_TOKEN_API_QUESTION || '';
+
+export async function POST(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams;
-    const rubriqueId = searchParams.get('rubrique_id');
+    console.log("tongasoa ato am api question");
+
+    const body = await request.formData();
+    const rubriqueId = body.get('rubriqueId');
 
     if (!rubriqueId) {
       return NextResponse.json(
@@ -14,16 +20,25 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const url = new URL(`${BASE_URL}/api/questionnaire/entry.php`);
-    url.searchParams.append('rubrique_id', rubriqueId);
+    const url = new URL(URL_API_QUESTION);
+    console.log('Calling Questionnaire Q1 API:', url.toString());    
+    
+    const payloadQ1 = {
+      etape: "question",
+      field: "question1",
+      action: "get",
+      data: { 
+        id_categorie: rubriqueId 
+      }
+    };
 
-    console.log('Calling Questionnaire Q1 API:', url.toString());
-
-    const response = await fetch(url.toString(), {
-      method: 'GET',
-      headers: {
-        Accept: 'application/json',
-      },
+    const response = await fetch(URL_API_QUESTION, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${TOKEN}`
+        },
+      body: JSON.stringify(payloadQ1),
     });
 
     if (!response.ok) {
@@ -34,6 +49,8 @@ export async function GET(request: NextRequest) {
     }
 
     const data = await response.json();
+
+    console.log("API Q1", data);
 
     return NextResponse.json(data, { status: 200 });
   } catch (error) {

@@ -3,6 +3,13 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useFlowStore } from '@/lib/stores/flow-store';
+import { basePath } from '@/lib/utils';
+
+// Toujours utiliser le proxy Next.js pour éviter les problèmes CORS
+const getApiBasePath = () => {
+  return basePath || '';
+};
+
 
 // =============================================================================
 // TYPES - Format API
@@ -79,14 +86,37 @@ export function useDynamicQuestionnaire(rubriqueId: string) {
   } = useQuery({
     queryKey: ['questionnaire', 'q1', rubriqueId],
     queryFn: async () => {
-      const res = await fetch(`/api/questionnaire/q1?rubrique_id=${rubriqueId}`);
+
+      const formData = new FormData();
+      formData.append('rubriqueId', rubriqueId);
+
+      const apiBase = getApiBasePath();
+      const apiUrl = `${apiBase}/api/questionnaire/q1`;
+      
+      const res = await fetch(apiUrl, {
+        method: 'POST',
+        body: formData,
+      });
+
       if (!res.ok) throw new Error('Failed to fetch Q1');
-      const apiData: ApiQuestion = await res.json();
+
+      let apiData = await res.json();
+      apiData = apiData.response;
+
+      console.log("apiData RAW", apiData);
+
+      const apiDataAPI : ApiQuestion = apiData;
+
+      console.log("apiData", apiDataAPI);
+
+      const dataReturn = {
+        entryQuestion: normalizeQuestion(apiDataAPI, 0),
+      };
+
+      console.log("dataReturn waaaaaa", dataReturn);
 
       // Transformer vers le format frontend
-      return {
-        entryQuestion: normalizeQuestion(apiData, 0),
-      };
+      return dataReturn;
     },
     enabled: !!rubriqueId,
   });
@@ -102,17 +132,30 @@ export function useDynamicQuestionnaire(rubriqueId: string) {
   } = useQuery({
     queryKey: ['questionnaire', 'qn', rubriqueId, q1AnswerCode],
     queryFn: async () => {
-      const res = await fetch(`/api/questionnaire/qn?rubrique_id=${rubriqueId}&q1_answer=${q1AnswerCode}`);
+      const formData = new FormData();
+      formData.append('rubriqueId', rubriqueId);
+      formData.append('q1Answer', q1AnswerCode);
+
+      const apiBase = getApiBasePath();
+      const apiUrl = `${apiBase}/api/questionnaire/qn`;
+      
+      const res = await fetch(apiUrl, {
+        method: 'POST',
+        body: formData,
+      });
+      
       if (!res.ok) throw new Error('Failed to fetch path questions');
-      const apiData: ApiQuestion[] = await res.json();
+      let apiData = await res.json();
+       apiData = apiData.response;
+       const apiDataAPI : ApiQuestion[] = apiData;
 
       // Transformer chaque question du parcours (Q2 à Qn)
       // L'index commence à 1 car Q1 est déjà passée
-      const questions = apiData.map((q, index) => normalizeQuestion(q, index + 1));
+      const questions = apiDataAPI.map((q, index) => normalizeQuestion(q, index + 1));
 
       return {
         questions,
-        totalQuestions: apiData.length,
+        totalQuestions: apiDataAPI.length,
       };
     },
     enabled: !!q1AnswerCode && !!rubriqueId,
