@@ -3,6 +3,9 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import type { ContactFormData, ProfileData, UserAnswers } from '@/types';
 
 export interface FlowState {
+  // ID de la catégorie (depuis le token URL ou query param)
+  categoryId: number | null;
+
   // État du questionnaire
   userAnswers: Record<number, string[]>;
   otherTexts: Record<number, string>;
@@ -21,12 +24,13 @@ export interface FlowState {
   // Timestamp de début (pour tracking)
   startTime: number | null;
 
-  files: File[]; 
-  
+  files: File[];
+
   setFilesStore: (files: File[]) => void;
   addFilesStore: (newFiles: File[]) => void;
 
   // Actions
+  setCategoryId: (id: number) => void;
   setUserAnswers: (answers: Record<number, string[]>) => void;
   setOtherTexts: (texts: Record<number, string>) => void;
   setAnswer: (questionId: number, answerIds: string[]) => void;
@@ -42,6 +46,7 @@ export interface FlowState {
 }
 
 const initialState = {
+  categoryId: null,
   userAnswers: {},
   otherTexts: {},
   dynamicAnswers: {},
@@ -56,6 +61,8 @@ export const useFlowStore = create<FlowState>()(
   persist(
     (set, get) => ({
       ...initialState,
+
+      setCategoryId: (id) => set({ categoryId: id }),
 
       setUserAnswers: (answers) => set({ userAnswers: answers }),
 

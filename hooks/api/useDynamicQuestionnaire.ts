@@ -19,7 +19,7 @@ const getApiBasePath = () => {
 interface ApiQuestion {
   id: number;
   intitule: string;
-  choix: string;              // "1" = single, "2" = multi
+  choix: string;              // "1" = multi, "2" = single
   justification: string | null;
   id_reponse_parent: number | null;
   id_question_parent: number | null;
@@ -60,7 +60,7 @@ function normalizeQuestion(apiQuestion: ApiQuestion, questionIndex: number): Nor
     id: apiQuestion.id,
     code: `Q${questionIndex + 1}`,
     title: apiQuestion.intitule,
-    type: apiQuestion.choix === '2' ? 'multi' : 'single',
+    type: apiQuestion.choix === '1' ? 'multi' : 'single',  // "1" = multi, "2" = single
     justification: apiQuestion.justification,
     answers: apiQuestion.reponses.map((r) => ({
       id: String(r.id),

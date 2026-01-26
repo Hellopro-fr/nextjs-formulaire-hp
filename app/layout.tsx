@@ -11,12 +11,29 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Trouvez votre fournisseur - Demande de devis',
-  description: 'Plateforme de mise en relation avec des fournisseurs de ponts élévateurs. Trouvez le fournisseur adapté à vos besoins.',
+  title: 'Trouvez votre fournisseur - Demande de devis | HelloPro',
+  description:
+    'Recevez gratuitement des devis de fournisseurs qualifiés. HelloPro vous met en relation avec les meilleurs professionnels pour votre projet.',
+  authors: [{ name: 'HelloPro' }],
+  robots: {
+    index: false,
+    follow: false,
+  },
   openGraph: {
-    title: 'Trouvez votre fournisseur - Demande de devis',
-    description: 'Plateforme de mise en relation avec des fournisseurs de ponts élévateurs.',
+    title: 'Trouvez votre fournisseur - Demande de devis | HelloPro',
+    description:
+      'Recevez gratuitement des devis de fournisseurs qualifiés. HelloPro vous met en relation avec les meilleurs professionnels.',
     type: 'website',
+    siteName: 'HelloPro',
+    locale: 'fr_FR',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'Demande de devis | HelloPro',
+    description: 'Recevez gratuitement des devis de fournisseurs qualifiés.',
+  },
+  other: {
+    'format-detection': 'telephone=no',
   },
 };
 
@@ -33,6 +50,10 @@ export default function RootLayout({
   return (
     <html lang="fr" suppressHydrationWarning>
       <head>
+        {/* Preconnect pour performance (Legacy pattern) */}
+        <link rel="preconnect" href="https://www.googletagmanager.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://www.google-analytics.com" crossOrigin="anonymous" />
+
         {gtmId && gtmId !== 'GTM-XXXXXXX' && <GoogleTagManager gtmId={gtmId} />}
       </head>
       <body className={inter.className}>
@@ -56,8 +77,8 @@ export default function RootLayout({
         {/* Google Analytics 4 */}
         {gaId && gaId !== 'G-XXXXXXXXXX' && <GoogleAnalytics gaId={gaId} />}
 
-        {/* Hotjar */}
-        {hotjarId && hotjarId !== '1234567' && (
+        {/* Hotjar - Si non renseigné, peut être chargé via GTM */}
+        {hotjarId && hotjarId !== '1234567' && hotjarId !== '' && (
           <Hotjar hjid={hotjarId} hjsv={hotjarSv} />
         )}
       </body>
