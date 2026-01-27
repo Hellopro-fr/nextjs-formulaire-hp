@@ -61,13 +61,15 @@ const NeedsQuestionnaire = ({ onComplete, rubriqueId }: NeedsQuestionnaireProps)
     // Track funnel start (une seule fois)
     if (!hasTrackedStart.current) {
       hasTrackedStart.current = true;
-      setFunnelContext({
-        funnel_devisplus: true,
-        funnel_context: isDynamicMode ? 'dynamic' : 'static',
-      });
+      // Initialiser le contexte avec rubrique_id
+      if (rubriqueId) {
+        setFunnelContext({
+          rubrique_id: parseInt(rubriqueId, 10),
+        });
+      }
       trackGTMFunnelStart();
     }
-  }, [startTime, setStartTime, isDynamicMode]);
+  }, [startTime, setStartTime, rubriqueId]);
 
   // Quand le questionnaire dynamique est terminé
   useEffect(() => {

@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowLeft, Send, Shield, Clock, CheckCircle, Paperclip, X } from "lucide-react";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useLeadSubmission } from "@/hooks/api/useLeadSubmission";
@@ -12,7 +12,7 @@ import PhoneInput from "./PhoneInput";
 import { validatePhoneNumber } from "@/lib/utils/phone-validation";
 
 // Analytics imports
-import { trackContactFormView, trackFormSubmitAttempt, trackFormValidationErrors, identifyUser } from "@/lib/analytics";
+import { trackContactFormView, trackFormValidationErrors } from "@/lib/analytics";
 
 interface ContactFormProps {
   selectedSuppliers: Supplier[];
@@ -49,8 +49,13 @@ const ContactForm = ({ selectedSuppliers, onBack }: ContactFormProps) => {
   const [errors, setErrors] = useState<Partial<Record<keyof ContactFormData, string>>>({});
   const [files, setFiles] = useState<File[]>([]);
 
+  // Ref pour éviter les doubles appels en StrictMode
+  const hasTrackedView = useRef(false);
+
   // Track form view on mount
   useEffect(() => {
+    if (hasTrackedView.current) return;
+    hasTrackedView.current = true;
     trackContactFormView(selectedSuppliers.length);
   }, [selectedSuppliers.length]);
 
@@ -168,7 +173,7 @@ const ContactForm = ({ selectedSuppliers, onBack }: ContactFormProps) => {
         type: field === 'email' || field === 'phone' ? 'invalid_format' : 'required',
         message: message || '',
       }));
-      trackFormValidationErrors('contact_form', errorList);
+      trackFormValidationErrors(errorList.length, errorList);
     }
 
     return Object.keys(newErrors).length === 0;
@@ -176,26 +181,13 @@ const ContactForm = ({ selectedSuppliers, onBack }: ContactFormProps) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    let isValid = true;
-    let missingFields: string[] = [];
 
-    if (!(isKnownBuyer && buyerCheckResult?.infoBuyer)) {      
-      isValid = validateForm();
-      missingFields = Object.keys(errors);
+    if (!(isKnownBuyer && buyerCheckResult?.infoBuyer)) {
+      const isValid = validateForm();
+      if (!isValid) return;
     }
 
-    // console.log('missingFields ve' ,missingFields);
-
-    trackFormSubmitAttempt(isValid, missingFields);
-
-    if (!isValid) return;
-
-    // Identify user before submission
-    identifyUser(
-      formData.email,
-      profileData?.type || 'unknown',
-      formData.company || profileData?.company?.name
-    );
+    const userKnownStatus = isKnownBuyer ? 'known' as const : 'unknown' as const;
 
     const finalData = { 
       ...formData, 
@@ -219,6 +211,7 @@ const ContactForm = ({ selectedSuppliers, onBack }: ContactFormProps) => {
       answers: userAnswers,
       selectedSupplierIds: selectedSupplierIds,
       submittedAt: new Date().toISOString(),
+      userKnownStatus,
     });
   };
 

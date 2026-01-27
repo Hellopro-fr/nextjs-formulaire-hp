@@ -123,6 +123,7 @@ export interface LeadSubmission {
   answers: UserAnswers;
   selectedSupplierIds: string[];
   submittedAt: string;
+  userKnownStatus: 'known' | 'unknown';
 }
 
 export interface LeadResponse {

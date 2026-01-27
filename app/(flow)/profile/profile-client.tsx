@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import ProfileTypeStep from '@/components/flow/ProfileTypeStep';
 import MatchingLoader from '@/components/flow/MatchingLoader';
+import { useFlowNavigation } from '@/hooks/useFlowNavigation';
 import type { ProfileData } from '@/types';
 
 interface ProfileClientProps {
@@ -15,7 +15,7 @@ export default function ProfileClient({
   priorityCountries,
   otherCountries,
 }: ProfileClientProps) {
-  const router = useRouter();
+  const { goToSelection, goToQuestionnaire } = useFlowNavigation();
   const [showLoader, setShowLoader] = useState(false);
 
   const handleComplete = (data: ProfileData) => {
@@ -24,12 +24,13 @@ export default function ProfileClient({
   };
 
   const handleLoaderComplete = () => {
-    // Navigate to selection step after loader finishes
-    router.push('/selection');
+    // Navigate to selection step after loader finishes (with GET params preserved)
+    goToSelection();
   };
 
   const handleBack = () => {
-    router.push('/questionnaire');
+    // Navigate back to questionnaire (with GET params preserved)
+    goToQuestionnaire();
   };
 
   if (showLoader) {

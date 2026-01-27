@@ -1,18 +1,14 @@
 "use client";
 
-import { useRouter } from 'next/navigation';
+import { useFlowNavigation } from '@/hooks/useFlowNavigation';
 import ContactFormSimple from '@/components/flow/ContactFormSimple';
 
 export default function ContactSimpleClient() {
-  const router = useRouter();
-
-  const handleBack = () => {
-    router.push('/something-to-add');
-  };
+  const { goToSomethingToAdd } = useFlowNavigation();
 
   return (
     <ContactFormSimple
-      onBack={handleBack}
+      onBack={goToSomethingToAdd}
     />
   );
 }
