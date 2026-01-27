@@ -117,19 +117,21 @@ const NeedsQuestionnaire = ({ onComplete, rubriqueId }: NeedsQuestionnaireProps)
       canGoBack,
     } = dynamicQuestionnaire;
 
-    // Loading state
-    if (isLoading) {
-      return (
-        <div className="fixed inset-0 z-50 flex flex-col bg-background">
-          <ProgressHeader steps={STEPS} currentStep={1} progress={0} />
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center space-y-4">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-              <p className="text-muted-foreground">Chargement des questions...</p>
-            </div>
+   const LoadingScreen = ({ progress = 0 }: { progress?: number }) => (
+      <div className="fixed inset-0 z-50 flex flex-col bg-background">
+        <ProgressHeader steps={STEPS} currentStep={1} progress={progress} />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center space-y-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            <p className="text-muted-foreground">Chargement des questions...</p>
           </div>
         </div>
-      );
+      </div>
+    );
+
+    // Loading state
+    if (isLoading) {
+      return <LoadingScreen/>;
     }
 
     // Error state
@@ -154,6 +156,10 @@ const NeedsQuestionnaire = ({ onComplete, rubriqueId }: NeedsQuestionnaireProps)
 
     // No question available
     if (!currentQuestion) {
+      if (dynamicQuestionnaire.isComplete || dynamicQuestionnaire.isLoading) {
+        return <LoadingScreen/>;
+      }
+
       return (
         <div className="fixed inset-0 z-50 flex flex-col bg-background">
           <ProgressHeader steps={STEPS} currentStep={1} progress={0} />

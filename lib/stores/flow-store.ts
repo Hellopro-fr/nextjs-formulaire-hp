@@ -27,6 +27,8 @@ export interface FlowState {
 
   files: File[];
 
+  entryUrl: string | null;
+
   setFilesStore: (files: File[]) => void;
   addFilesStore: (newFiles: File[]) => void;
 
@@ -44,6 +46,7 @@ export interface FlowState {
   toggleSupplier: (supplierId: string) => void;
   setStartTime: (time: number) => void;
   reset: () => void;
+  setEntryUrl: (url: string) => void;
 }
 
 const initialState = {
@@ -56,6 +59,7 @@ const initialState = {
   selectedSupplierIds: [],
   startTime: null,
   files: [],
+  entryUrl: ""
 };
 
 export const useFlowStore = create<FlowState>()(
@@ -119,6 +123,8 @@ export const useFlowStore = create<FlowState>()(
       setStartTime: (time) => set({ startTime: time }),
 
       reset: () => set(initialState),
+
+      setEntryUrl: (url) => set({ entryUrl: url }),
     }),
     {
       name: 'flow-storage',

@@ -5,7 +5,7 @@ import ProfileTypeStep from '@/components/flow/ProfileTypeStep';
 import MatchingLoader from '@/components/flow/MatchingLoader';
 import { useFlowNavigation } from '@/hooks/useFlowNavigation';
 import type { ProfileData } from '@/types';
-
+import { useFlowStore } from '@/lib/stores/flow-store';
 interface ProfileClientProps {
   priorityCountries: string[];
   otherCountries: string[];

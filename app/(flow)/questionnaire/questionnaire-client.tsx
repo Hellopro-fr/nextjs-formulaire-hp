@@ -34,6 +34,9 @@ export default function QuestionnaireClient({
       if (!isNaN(id) && id > 0) {
         setCategoryId(id);
       }
+      
+      /* const currentFullUrl = `${pathname}?${searchParams.toString()}`;
+      setEntryUrl(currentFullUrl); */
     }
   }, [initialCategoryId, searchParams, setCategoryId]);
 
