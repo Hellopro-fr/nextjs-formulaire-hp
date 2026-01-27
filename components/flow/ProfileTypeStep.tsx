@@ -11,9 +11,7 @@ import type { ProfileType, CompanyResult, ProfileData } from "@/types";
 import type { SirenCompanyData } from "@/lib/api/services/siret.service";
 import {
   trackProfileView,
-  trackProfileTypeSelected,
   trackProfileComplete,
-  trackCompanySearch,
 } from "@/lib/analytics";
 
 
@@ -86,13 +84,6 @@ const ProfileTypeStep = ({ priorityCountries, otherCountries, onComplete, onBack
     { query: searchQuery },
     searchQuery.length >= 2 && !selectedCompany && !showManualCompanyForm
   );
-
-  // Track company search quand les résultats arrivent
-  useEffect(() => {
-    if (searchQuery.length >= 2 && sirenResults && !sirenLoading) {
-      trackCompanySearch(searchQuery, sirenResults.length);
-    }
-  }, [searchQuery, sirenResults, sirenLoading]);
 
   // Postal code search for "creation" section
   const {
@@ -213,6 +204,7 @@ const ProfileTypeStep = ({ priorityCountries, otherCountries, onComplete, onBack
     if (!isValid) return;
 
     const data: ProfileData = { type: selectedType };
+    let info_datalayer = 'unkown';
 
     switch (selectedType) {
       case "pro_france":
@@ -229,6 +221,7 @@ const ProfileTypeStep = ({ priorityCountries, otherCountries, onComplete, onBack
           data.city        = selectedCompany?.city;
           data.siren       = selectedCompany?.siren;
         }
+        info_datalayer = 'pro_france';
         break;
 
       case "creation":
@@ -238,6 +231,7 @@ const ProfileTypeStep = ({ priorityCountries, otherCountries, onComplete, onBack
           data.postalCode = postalCode;
           data.city       = city;
         }
+        info_datalayer = 'creation_societe';
         break;
 
       case "particulier":
@@ -247,12 +241,14 @@ const ProfileTypeStep = ({ priorityCountries, otherCountries, onComplete, onBack
           data.postalCode = particulierPostalCode;
           data.city       = particulierCity;
         }
+        info_datalayer = 'particulier';
         break;
 
       case "pro_foreign":
         data.companyName = companyName;
         data.country     = country;
         data.countryID   = countryID;
+        info_datalayer = 'pro_etranger';
         break;
     }
 
@@ -260,14 +256,7 @@ const ProfileTypeStep = ({ priorityCountries, otherCountries, onComplete, onBack
     setProfileData(data);
 
     // Track profile complete
-    const hasCompany = selectedType === "pro_france" || selectedType === "pro_foreign";
-    const location = data.city ? `${data.postalCode} ${data.city}` : data.country;
-    trackProfileComplete(
-      selectedType || 'unknown',
-      hasCompany,
-      data.countryID,
-      location
-    );
+    trackProfileComplete(info_datalayer || 'unknown');
 
     onComplete(data);
   };
@@ -329,7 +318,6 @@ const ProfileTypeStep = ({ priorityCountries, otherCountries, onComplete, onBack
                   <button
                     onClick={() => {
                       setSelectedType("pro_france");
-                      trackProfileTypeSelected("pro_france");
                       setSelectedCompany(null);
                       setSearchQuery("");
                       setShowManualCompanyForm(false);
@@ -550,7 +538,6 @@ const ProfileTypeStep = ({ priorityCountries, otherCountries, onComplete, onBack
                   <button
                     onClick={() => {
                       setSelectedType("creation");
-                      trackProfileTypeSelected("creation");
                     }}
                     className="w-full text-left"
                   >
@@ -729,7 +716,6 @@ const ProfileTypeStep = ({ priorityCountries, otherCountries, onComplete, onBack
                   <button
                     onClick={() => {
                       setSelectedType("pro_foreign");
-                      trackProfileTypeSelected("pro_foreign");
                     }}
                     className="w-full text-left"
                   >
@@ -843,7 +829,6 @@ const ProfileTypeStep = ({ priorityCountries, otherCountries, onComplete, onBack
                   <button
                     onClick={() => {
                       setSelectedType("particulier");
-                      trackProfileTypeSelected("particulier");
                     }}
                     className="w-full text-left"
                   >

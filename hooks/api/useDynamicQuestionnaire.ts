@@ -148,8 +148,9 @@ export function useDynamicQuestionnaire(rubriqueId: string) {
       
       if (!res.ok) throw new Error('Failed to fetch path questions');
       let apiData = await res.json();
-       apiData = apiData.response;
-       const apiDataAPI : ApiQuestion[] = apiData;
+      apiData = apiData.response;
+      // L'API retourne un tableau imbriqué [[...questions]], on aplatit
+      const apiDataAPI: ApiQuestion[] = Array.isArray(apiData?.[0]) ? apiData.flat() : apiData;
 
       // Transformer chaque question du parcours (Q2 à Qn)
       // L'index commence à 1 car Q1 est déjà passée
