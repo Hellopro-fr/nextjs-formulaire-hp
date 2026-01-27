@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import ProfileTypeStep from '@/components/flow/ProfileTypeStep';
 import MatchingLoader from '@/components/flow/MatchingLoader';
 import type { ProfileData } from '@/types';
-
+import { useFlowStore } from '@/lib/stores/flow-store';
 interface ProfileClientProps {
   priorityCountries: string[];
   otherCountries: string[];
@@ -15,6 +15,9 @@ export default function ProfileClient({
   priorityCountries,
   otherCountries,
 }: ProfileClientProps) {
+
+  const { entryUrl } = useFlowStore();
+
   const router = useRouter();
   const [showLoader, setShowLoader] = useState(false);
 
@@ -29,7 +32,13 @@ export default function ProfileClient({
   };
 
   const handleBack = () => {
-    router.push('/questionnaire');
+    if (entryUrl) {
+      // Redirige vers l'URL exacte d'entrée (avec tous les params)
+      router.push(entryUrl);
+    } else {
+      // Fallback de sécurité vers la racine si rien n'est stocké
+      router.push('/');
+    }
   };
 
   if (showLoader) {

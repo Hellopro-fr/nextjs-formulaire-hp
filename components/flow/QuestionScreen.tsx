@@ -54,7 +54,7 @@ const QuestionScreen = ({
           {/* Question counter */}
           <div className="text-center">
             <span className="inline-flex items-center gap-2 rounded-full bg-secondary px-4 py-1.5 text-sm font-medium text-secondary-foreground">
-              Question {currentIndex + 1} sur {totalQuestions}
+              {totalQuestions == 1 ? "Question 1" : `Question ${currentIndex + 1} sur ${totalQuestions}`}              
             </span>
           </div>
 
@@ -226,7 +226,8 @@ const QuestionScreen = ({
                     : "bg-muted text-muted-foreground cursor-not-allowed"
                 )}
               >
-                {isLast ? "Voir ma sélection" : "Suivant"}
+                {isLast && totalQuestions > 1 ? "Voir ma sélection" : "Suivant"}                
+
                 <ArrowRight className="h-4 w-4" />
               </button>
             </div>

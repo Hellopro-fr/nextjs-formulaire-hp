@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import NeedsQuestionnaire from '@/components/flow/NeedsQuestionnaire';
 import { useFlowStore } from '@/lib/stores/flow-store';
 
@@ -15,8 +15,10 @@ export default function QuestionnaireClient({
   initialToken
 }: QuestionnaireClientProps) {
   const router = useRouter();
+
+  const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { setCategoryId } = useFlowStore();
+  const { setCategoryId, setEntryUrl} = useFlowStore();
 
   // Récupérer et stocker le categoryId
   // Priorité : props du Server Component > searchParams client
@@ -33,6 +35,9 @@ export default function QuestionnaireClient({
       if (!isNaN(id) && id > 0) {
         setCategoryId(id);
       }
+      
+      const currentFullUrl = `${pathname}?${searchParams.toString()}`;
+      setEntryUrl(currentFullUrl);
     }
   }, [initialCategoryId, searchParams, setCategoryId]);
 
