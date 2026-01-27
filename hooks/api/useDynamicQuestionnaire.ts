@@ -77,8 +77,15 @@ function normalizeQuestion(apiQuestion: ApiQuestion, questionIndex: number): Nor
 // =============================================================================
 
 export function useDynamicQuestionnaire(rubriqueId: string) {
-  const [currentIndex, setCurrentIndex] = useState(0);
   const { dynamicAnswers, setDynamicAnswer, resetDynamicAnswers } = useFlowStore();
+
+  // Restaurer l'index à partir des réponses déjà enregistrées dans le store.
+  // Si l'utilisateur revient (ex: retour depuis /profile), on affiche la dernière
+  // question répondue au lieu de repartir à Q1.
+  const [currentIndex, setCurrentIndex] = useState(() => {
+    const answeredCount = Object.keys(dynamicAnswers).length;
+    return answeredCount > 0 ? answeredCount - 1 : 0;
+  });
 
   // Appel A : Charger Q1
   const {
