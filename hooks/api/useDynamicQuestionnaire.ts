@@ -27,9 +27,9 @@ interface ApiQuestion {
 }
 
 interface ApiAnswer {
-  id: number;
+  id: string | number;
   reponse: string;
-  equivalence?: unknown[];    // Format à définir plus tard
+  equivalence?: any[];    // Format à définir plus tard
 }
 
 // Format normalisé pour le frontend
@@ -46,6 +46,7 @@ interface NormalizedAnswer {
   id: string;
   code: string;
   mainText: string;
+  equivalence?: any[]; // Ajoutez ceci si absent
 }
 
 // =============================================================================
@@ -62,10 +63,11 @@ function normalizeQuestion(apiQuestion: ApiQuestion, questionIndex: number): Nor
     title: apiQuestion.intitule,
     type: apiQuestion.choix === '1' ? 'multi' : 'single',  // "1" = multi, "2" = single
     justification: apiQuestion.justification,
-    answers: apiQuestion.reponses.map((r) => ({
+    answers: apiQuestion.reponses.map((r) => ({      
       id: String(r.id),
       code: String(r.id),
       mainText: r.reponse,
+      equivalence: r.equivalence,
     })),
   };
 }
@@ -104,7 +106,7 @@ export function useDynamicQuestionnaire(rubriqueId: string) {
       apiData = apiData.response;
 
       console.log("apiData RAW", apiData);
-
+      
       const apiDataAPI : ApiQuestion = apiData;
 
       console.log("apiData", apiDataAPI);
@@ -184,8 +186,19 @@ export function useDynamicQuestionnaire(rubriqueId: string) {
   const submitAnswer = (answerCodes: string[]) => {
     if (!currentQuestion) return;
     const questionCode = currentQuestion.code || `Q${currentIndex + 1}`;
-    setDynamicAnswer(questionCode, answerCodes);
-    setCurrentIndex(prev => prev + 1);
+
+    // Log de debug pour voir ce qui arrive
+    console.log("SubmitAnswer - Selected Codes:", answerCodes);
+    console.log("SubmitAnswer - Current Question Answers:", currentQuestion.answers);
+
+    const selectedEquivalences = currentQuestion.answers
+      .filter((a) => answerCodes.includes(a.code)) // On compare code à code
+      .flatMap((a) => a.equivalence || []);
+
+    console.log("Extracted Equivalences:", selectedEquivalences);
+
+    setDynamicAnswer(questionCode, answerCodes, selectedEquivalences);
+    setCurrentIndex((prev) => prev + 1);
   };
 
   // Retour arrière

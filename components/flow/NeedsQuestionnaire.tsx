@@ -188,14 +188,16 @@ const NeedsQuestionnaire = ({ onComplete, rubriqueId }: NeedsQuestionnaireProps)
       const currentAnswers = dynamicAnswers[questionCode] || [];
 
       if (currentQuestion.type === 'multi') {
-        // Toggle selection for multi-select
-        if (currentAnswers.includes(answerCode)) {
-          setDynamicAnswer(questionCode, currentAnswers.filter((code) => code !== answerCode));
-        } else {
-          setDynamicAnswer(questionCode, [...currentAnswers, answerCode]);
-        }
+        // Pour le multi, on met juste à jour les codes pour l'UI
+        // On passe un tableau vide [] pour les équivalences car elles seront validées au clic sur "Suivant"
+        const nextAnswers = currentAnswers.includes(answerCode)
+          ? currentAnswers.filter((code) => code !== answerCode)
+          : [...currentAnswers, answerCode];
+        
+        setDynamicAnswer(questionCode, nextAnswers, []); 
       } else {
-        // Single select - submit and advance (la vue de la question suivante sera trackée)
+        // Mode Single : On utilise la fonction submitAnswer du hook
+        // qui contient déjà la logique d'extraction des équivalences
         submitAnswer([answerCode]);
       }
     };
@@ -203,8 +205,10 @@ const NeedsQuestionnaire = ({ onComplete, rubriqueId }: NeedsQuestionnaireProps)
     const handleDynamicNext = () => {
       const questionCode = currentQuestion.code || `Q${currentIndex + 1}`;
       const currentAnswers = dynamicAnswers[questionCode] || [];
+      
       if (currentAnswers.length > 0) {
-        // La vue de la question suivante sera trackée automatiquement
+        // Utilisez la méthode du hook ! Elle gère l'extraction des équivalences 
+        // ET le passage à la question suivante (setCurrentIndex)
         submitAnswer(currentAnswers);
       }
     };
