@@ -323,15 +323,16 @@ export function trackProductSelectionChange(
   action: 'ajouter' | 'retirer',
   totalSelected: number
 ) {
-  // Vérifier si c'est la première action de ce type pour cet utilisateur dans la session
-  const actionKey = `product_selection_${action}`;
-  const isFirstActionOfType = isFirstView(actionKey);
+  // Vérifier si c'est la première action de chaque type pour cet utilisateur dans la session
+  const isFirstAdd = action === 'ajouter' && isFirstView('product_selection_ajouter');
+  const isFirstRemove = action === 'retirer' && isFirstView('product_selection_retirer');
 
   trackQuoteFunnel(currentStepIndex, 'product-selection', 'selection', {
     product_id: productId,
     action,
     total_selected: totalSelected,
-    is_first_action: isFirstActionOfType,
+    is_first_add: isFirstAdd,
+    is_first_remove: isFirstRemove,
   });
 }
 
