@@ -15,7 +15,11 @@ import CustomNeedForm from "./CustomNeedForm";
 import ProductDetailModal from "./ProductDetailModal";
 import ProductComparisonModal from "./ProductComparisonModal";
 import CriteriaChangedBanner from "./CriteriaChangedBanner";
-import { trackComparisonModalView } from "@/lib/analytics";
+import {
+  trackComparisonModalView,
+  trackProductSelectionChange,
+  trackProductModalView,
+} from "@/lib/analytics";
 import type { Supplier } from "@/types";
 
 const productLift1 = getAssetPath("/images/product-lift-1.jpg");
@@ -513,11 +517,15 @@ const SupplierSelectionModal = ({ userAnswers, onBackToQuestionnaire }: Supplier
   const selectedCount = selectedIds.size;
 
   const toggleSupplier = (id: string) => {
-    const newIds = selectedIds.has(id)
+    const isRemoving = selectedIds.has(id);
+    const newIds = isRemoving
       ? selectedSupplierIds.filter((sid) => sid !== id)
       : [...selectedSupplierIds, id];
     setSelectedSupplierIds(newIds);
     setAnimatingCount(true);
+
+    // Track add/remove selection
+    trackProductSelectionChange(id, isRemoving ? 'retirer' : 'ajouter', newIds.length);
   };
 
   const resetSelection = () => {
@@ -527,6 +535,12 @@ const SupplierSelectionModal = ({ userAnswers, onBackToQuestionnaire }: Supplier
 
   const handleViewDetails = (id: string) => {
     setSelectedProductId(id);
+
+    // Track product modal view
+    const product = ALL_SUPPLIERS.find((s) => s.id === id);
+    if (product) {
+      trackProductModalView(id, product.productName, product.supplier?.name || product.supplierName);
+    }
   };
 
   const selectedProduct = selectedProductId

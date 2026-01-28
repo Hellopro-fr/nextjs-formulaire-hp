@@ -1,8 +1,8 @@
 "use client";
 
 import { useMutation } from '@tanstack/react-query';
-import { useRouter } from 'next/navigation';
 import { envoyerDemandes } from '@/lib/api/demande-info';
+import { useFlowNavigation } from '@/hooks/useFlowNavigation';
 import type { LeadSubmission, Supplier, ProfileType } from '@/types';
 import type { DemandeInfoPayload, StatutAcheteur, ProduitSelection } from '@/types/demande';
 
@@ -54,7 +54,7 @@ interface UseLeadSubmissionOptions {
 }
 
 export function useLeadSubmission(options: UseLeadSubmissionOptions = {}) {
-  const router = useRouter();
+  const { navigateTo } = useFlowNavigation();
   const { suppliers = [] } = options;
 
   return useMutation({
@@ -115,9 +115,9 @@ export function useLeadSubmission(options: UseLeadSubmissionOptions = {}) {
       if (response.data?.leadId) {
         const profileType = variables.profile.type ?? 'unknown';
         trackLeadSubmitted(
-          response.data.leadId,
           variables.selectedSupplierIds.length,
-          profileType
+          profileType,
+          variables.userKnownStatus
         );
         trackGA4LeadSubmitted(
           response.data.leadId,
@@ -127,9 +127,16 @@ export function useLeadSubmission(options: UseLeadSubmissionOptions = {}) {
         tagHotjarUser(HOTJAR_TAGS.CONVERTED);
       }
 
-      // Navigate to confirmation page
+      // Navigate to confirmation page (avec conservation des paramètres GET)
       if (response.data?.redirectUrl) {
-        router.push(response.data.redirectUrl);
+        const url = response.data.redirectUrl;
+        // Si c'est une URL relative interne, conserver les paramètres GET
+        if (url.startsWith('/')) {
+          navigateTo(url);
+        } else {
+          // URL externe (redirection PHP) : naviguer directement
+          window.location.href = url;
+        }
       }
     },
     onError: (error) => {

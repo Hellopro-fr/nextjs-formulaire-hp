@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import NeedsQuestionnaire from '@/components/flow/NeedsQuestionnaire';
 import { useFlowStore } from '@/lib/stores/flow-store';
+import { useFlowNavigation } from '@/hooks/useFlowNavigation';
 
 interface QuestionnaireClientProps {
   initialCategoryId?: string;
@@ -14,9 +15,9 @@ export default function QuestionnaireClient({
   initialCategoryId,
   initialToken
 }: QuestionnaireClientProps) {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const { setCategoryId } = useFlowStore();
+  const { goToProfile } = useFlowNavigation();
 
   // Récupérer et stocker le categoryId
   // Priorité : props du Server Component > searchParams client
@@ -33,18 +34,21 @@ export default function QuestionnaireClient({
       if (!isNaN(id) && id > 0) {
         setCategoryId(id);
       }
+      
+      /* const currentFullUrl = `${pathname}?${searchParams.toString()}`;
+      setEntryUrl(currentFullUrl); */
     }
   }, [initialCategoryId, searchParams, setCategoryId]);
 
   const handleComplete = (answers: Record<number, string[]>) => {
-    // Navigate to profile step
-    router.push('/profile');
+    // Navigate to profile step with GET params preserved
+    goToProfile();
   };
 
   return (
     <NeedsQuestionnaire
       onComplete={handleComplete}
-      rubriqueId='2007702'
+      rubriqueId={initialCategoryId}
     />
   );
 }

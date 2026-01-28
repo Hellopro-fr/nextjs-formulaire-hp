@@ -61,13 +61,15 @@ const NeedsQuestionnaire = ({ onComplete, rubriqueId }: NeedsQuestionnaireProps)
     // Track funnel start (une seule fois)
     if (!hasTrackedStart.current) {
       hasTrackedStart.current = true;
-      setFunnelContext({
-        funnel_devisplus: true,
-        funnel_context: isDynamicMode ? 'dynamic' : 'static',
-      });
+      // Initialiser le contexte avec rubrique_id
+      if (rubriqueId) {
+        setFunnelContext({
+          rubrique_id: parseInt(rubriqueId, 10),
+        });
+      }
       trackGTMFunnelStart();
     }
-  }, [startTime, setStartTime, isDynamicMode]);
+  }, [startTime, setStartTime, rubriqueId]);
 
   // Quand le questionnaire dynamique est terminé
   useEffect(() => {
@@ -115,19 +117,21 @@ const NeedsQuestionnaire = ({ onComplete, rubriqueId }: NeedsQuestionnaireProps)
       canGoBack,
     } = dynamicQuestionnaire;
 
-    // Loading state
-    if (isLoading) {
-      return (
-        <div className="fixed inset-0 z-50 flex flex-col bg-background">
-          <ProgressHeader steps={STEPS} currentStep={1} progress={0} />
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center space-y-4">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-              <p className="text-muted-foreground">Chargement des questions...</p>
-            </div>
+   const LoadingScreen = ({ progress = 0 }: { progress?: number }) => (
+      <div className="fixed inset-0 z-50 flex flex-col bg-background">
+        <ProgressHeader steps={STEPS} currentStep={1} progress={progress} />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center space-y-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            <p className="text-muted-foreground">Chargement des questions...</p>
           </div>
         </div>
-      );
+      </div>
+    );
+
+    // Loading state
+    if (isLoading) {
+      return <LoadingScreen/>;
     }
 
     // Error state
@@ -152,6 +156,10 @@ const NeedsQuestionnaire = ({ onComplete, rubriqueId }: NeedsQuestionnaireProps)
 
     // No question available
     if (!currentQuestion) {
+      if (dynamicQuestionnaire.isComplete || dynamicQuestionnaire.isLoading) {
+        return <LoadingScreen/>;
+      }
+
       return (
         <div className="fixed inset-0 z-50 flex flex-col bg-background">
           <ProgressHeader steps={STEPS} currentStep={1} progress={0} />
@@ -182,14 +190,16 @@ const NeedsQuestionnaire = ({ onComplete, rubriqueId }: NeedsQuestionnaireProps)
       const currentAnswers = dynamicAnswers[questionCode] || [];
 
       if (currentQuestion.type === 'multi') {
-        // Toggle selection for multi-select
-        if (currentAnswers.includes(answerCode)) {
-          setDynamicAnswer(questionCode, currentAnswers.filter((code) => code !== answerCode));
-        } else {
-          setDynamicAnswer(questionCode, [...currentAnswers, answerCode]);
-        }
+        // Pour le multi, on met juste à jour les codes pour l'UI
+        // On passe un tableau vide [] pour les équivalences car elles seront validées au clic sur "Suivant"
+        const nextAnswers = currentAnswers.includes(answerCode)
+          ? currentAnswers.filter((code) => code !== answerCode)
+          : [...currentAnswers, answerCode];
+        
+        setDynamicAnswer(questionCode, nextAnswers, []); 
       } else {
-        // Single select - submit and advance (la vue de la question suivante sera trackée)
+        // Mode Single : On utilise la fonction submitAnswer du hook
+        // qui contient déjà la logique d'extraction des équivalences
         submitAnswer([answerCode]);
       }
     };
@@ -197,8 +207,10 @@ const NeedsQuestionnaire = ({ onComplete, rubriqueId }: NeedsQuestionnaireProps)
     const handleDynamicNext = () => {
       const questionCode = currentQuestion.code || `Q${currentIndex + 1}`;
       const currentAnswers = dynamicAnswers[questionCode] || [];
+      
       if (currentAnswers.length > 0) {
-        // La vue de la question suivante sera trackée automatiquement
+        // Utilisez la méthode du hook ! Elle gère l'extraction des équivalences 
+        // ET le passage à la question suivante (setCurrentIndex)
         submitAnswer(currentAnswers);
       }
     };

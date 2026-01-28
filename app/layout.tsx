@@ -6,6 +6,8 @@ import { Hotjar } from '@/components/analytics';
 import { QueryProvider, AnalyticsProvider, ThemeProvider } from '@/components/providers';
 import { Toaster } from '@/components/ui/toaster';
 import { Toaster as Sonner } from '@/components/ui/sonner';
+import { Suspense } from 'react';
+import FlowStorageReset from '@/components/flow/FlowStorageReset';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -67,6 +69,9 @@ export default function RootLayout({
         >
           <QueryProvider>
             <AnalyticsProvider>
+              <Suspense fallback={null}>
+                <FlowStorageReset />
+              </Suspense>
               {children}
               <Toaster />
               <Sonner />

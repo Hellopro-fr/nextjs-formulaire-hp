@@ -13,6 +13,7 @@ export interface FlowState {
 
   // État du questionnaire dynamique
   dynamicAnswers: Record<string, string[]>;
+  dynamicEquivalences: Record<string, any[]>;
 
   // État du profil
   profileData: ProfileData | null;
@@ -27,6 +28,8 @@ export interface FlowState {
 
   files: File[];
 
+  entryUrl: string | null;
+
   setFilesStore: (files: File[]) => void;
   addFilesStore: (newFiles: File[]) => void;
 
@@ -36,7 +39,14 @@ export interface FlowState {
   setOtherTexts: (texts: Record<number, string>) => void;
   setAnswer: (questionId: number, answerIds: string[]) => void;
   setOtherText: (questionId: number, text: string) => void;
-  setDynamicAnswer: (questionCode: string, answerCodes: string[]) => void;
+  // setDynamicAnswer: (questionCode: string, answerCodes: string[]) => void;
+  // Dans votre flow-store.ts (aperçu conceptuel)
+  setDynamicAnswer: (
+    questionCode: string, 
+    codes: string[], 
+    equivalences?: any[]
+  ) => void;
+
   resetDynamicAnswers: () => void;
   setProfileData: (data: ProfileData) => void;
   setContactData: (data: ContactFormData) => void;
@@ -44,6 +54,7 @@ export interface FlowState {
   toggleSupplier: (supplierId: string) => void;
   setStartTime: (time: number) => void;
   reset: () => void;
+  setEntryUrl: (url: string) => void;
 }
 
 const initialState = {
@@ -51,11 +62,13 @@ const initialState = {
   userAnswers: {},
   otherTexts: {},
   dynamicAnswers: {},
+  dynamicEquivalences: {},
   profileData: null,
   contactData: null,
   selectedSupplierIds: [],
   startTime: null,
   files: [],
+  entryUrl: ""
 };
 
 export const useFlowStore = create<FlowState>()(
@@ -85,15 +98,35 @@ export const useFlowStore = create<FlowState>()(
           },
         })),
 
-      setDynamicAnswer: (questionCode, answerCodes) =>
+      // setDynamicAnswer: (questionCode, answerCodes) =>
+      //   set((state) => ({
+      //     dynamicAnswers: {
+      //       ...state.dynamicAnswers,
+      //       [questionCode]: answerCodes,
+      //     },
+      //   })),
+
+      // Mise à jour de l'action pour accepter les équivalences
+      setDynamicAnswer: (questionCode, codes, equivalences = []) =>
         set((state) => ({
           dynamicAnswers: {
             ...state.dynamicAnswers,
-            [questionCode]: answerCodes,
+            [questionCode]: codes,
+          },
+          dynamicEquivalences: {
+            ...state.dynamicEquivalences,
+            [questionCode]: equivalences,
           },
         })),
 
-      resetDynamicAnswers: () => set({ dynamicAnswers: {} }),
+      // resetDynamicAnswers: () => set({ dynamicAnswers: {} }),
+
+      // N'oubliez pas de mettre à jour la fonction reset si vous en avez une
+      resetDynamicAnswers: () =>
+        set((state) => ({
+          dynamicAnswers: {},
+          dynamicEquivalences: {},
+        })),
 
       setProfileData: (data) => set({ profileData: data }),
 
@@ -119,6 +152,9 @@ export const useFlowStore = create<FlowState>()(
       setStartTime: (time) => set({ startTime: time }),
 
       reset: () => set(initialState),
+
+      setEntryUrl: (url) => set({ entryUrl: url }),     
+      
     }),
     {
       name: 'flow-storage',

@@ -7,12 +7,9 @@
 type StepType = 'init' | 'question' | 'choix-propart' | 'selection' | 'contact' | 'conversion';
 
 interface FunnelContext {
-  funnel_devisplus?: boolean;
-  funnel_context?: string;
   rubrique_id?: number;
   rubrique_name?: string;
   page_location_uri?: string;
-  abtest1?: string;
 }
 
 interface QuestionData {
@@ -82,6 +79,31 @@ function isFirstView(key: string): boolean {
     return true;
   }
   return false;
+}
+
+/**
+ * Réinitialiser tous les états de tracking (appelé lors d'un F5/reload)
+ * Nettoie les flags de déduplication et le session_id
+ */
+export function resetTrackingState(): void {
+  if (typeof window === 'undefined') return;
+
+  // Supprimer toutes les clés hp_viewed_* (déduplication)
+  const keysToRemove: string[] = [];
+  for (let i = 0; i < sessionStorage.length; i++) {
+    const key = sessionStorage.key(i);
+    if (key && key.startsWith('hp_viewed_')) {
+      keysToRemove.push(key);
+    }
+  }
+  keysToRemove.forEach((key) => sessionStorage.removeItem(key));
+
+  // Supprimer le session_id pour en générer un nouveau
+  sessionStorage.removeItem('hp_session_id');
+
+  // Réinitialiser le contexte funnel et le step index
+  funnelContext = {};
+  currentStepIndex = 0;
 }
 
 /**
@@ -163,18 +185,14 @@ export function trackQuoteFunnel(
 
   pushToDataLayer('devis_funnel_formulaire', {
     // Progression
-    step_index: stepIndex,
     step_name: stepName,
     step_number: stepIndex + 1,
     step_type: stepType,
 
     // Contexte funnel
-    funnel_devisplus: funnelContext.funnel_devisplus ?? true,
-    funnel_context: funnelContext.funnel_context ?? 'direct',
     rubrique_id: funnelContext.rubrique_id,
     rubrique_name: funnelContext.rubrique_name,
     page_location_uri: getPageLocationUri(),
-    abtest1: funnelContext.abtest1 ?? 'original',
 
     // Identifiants
     user_id: userId,
@@ -260,29 +278,12 @@ export function trackProfileView() {
 }
 
 /**
- * Track la sélection du type de profil
+ * Track la complétion du profil (choix pro/part terminé)
  */
-export function trackProfileTypeSelected(profileType: string) {
-  trackQuoteFunnel(currentStepIndex, 'choix-propart-selected', 'choix-propart', {
-    profile_type: profileType,
-  });
-}
-
-/**
- * Track la complétion du profil
- */
-export function trackProfileComplete(
-  profileType: string,
-  hasCompany: boolean,
-  countryId?: number,
-  location?: string
-) {
+export function trackProfileComplete(profileType: string) {
   currentStepIndex++;
-  trackQuoteFunnel(currentStepIndex, 'profile-complete', 'choix-propart', {
+  trackQuoteFunnel(currentStepIndex, 'choix-propart-complete', 'choix-propart', {
     profile_type: profileType,
-    has_company: hasCompany,
-    country_id: countryId,
-    location,
   });
 }
 
@@ -319,7 +320,7 @@ export function trackProductCardClick(
  */
 export function trackProductSelectionChange(
   productId: string,
-  action: 'add' | 'remove',
+  action: 'ajouter' | 'retirer',
   totalSelected: number
 ) {
   // Vérifier si c'est la première action de ce type pour cet utilisateur dans la session
@@ -368,16 +369,6 @@ export function trackContactFieldFilled(fieldName: string, fieldIndex: number) {
 }
 
 /**
- * Track la tentative de soumission du formulaire
- */
-export function trackFormSubmitAttempt(isValid: boolean, missingFields?: string[]) {
-  trackQuoteFunnel(currentStepIndex, 'submit-attempt', 'contact', {
-    is_valid: isValid,
-    missing_fields: missingFields,
-  });
-}
-
-/**
  * Track les erreurs de validation
  */
 export function trackFormValidationErrors(
@@ -393,12 +384,12 @@ export function trackFormValidationErrors(
 /**
  * Track la soumission réussie du lead
  */
-export function trackLeadSubmitted(leadId: string, suppliersCount: number, profileType: string) {
+export function trackLeadSubmitted(suppliersCount: number, profileType: string, userKnownStatus: 'known' | 'unknown') {
   currentStepIndex++;
   trackQuoteFunnel(currentStepIndex, 'submit-success', 'conversion', {
-    lead_id: leadId,
     suppliers_count: suppliersCount,
     profile_type: profileType,
+    user_known_status: userKnownStatus,
     conversion: true,
   });
 }
@@ -417,16 +408,6 @@ export function trackLeadSubmissionError(errorType: string, errorMessage: string
 // =============================================================================
 // ÉVÉNEMENTS SECONDAIRES (hors funnel principal)
 // =============================================================================
-
-/**
- * Track la recherche d'entreprise
- */
-export function trackCompanySearch(query: string, resultsCount: number) {
-  pushToDataLayer('recherche_entreprise', {
-    query_length: query.length,
-    results_count: resultsCount,
-  });
-}
 
 /**
  * Track l'ouverture du modal de modification de critères
@@ -505,23 +486,6 @@ export function trackProductModalView(productId: string, productName: string, su
     product_id: productId,
     product_name: productName,
     supplier_id: supplierId,
-    timestamp: new Date().toISOString(),
-  });
-}
-
-/**
- * Identifier l'utilisateur avec ses informations
- */
-export function identifyUser(email: string, profileType?: string, companyName?: string) {
-  const userId = getUserId();
-  const sessionId = getSessionId();
-
-  pushToDataLayer('utilisateur_identifie', {
-    user_id: userId,
-    session_id: sessionId,
-    email,
-    profile_type: profileType,
-    company_name: companyName,
     timestamp: new Date().toISOString(),
   });
 }
