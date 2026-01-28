@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import SomethingToAddClient from './something-to-add-client';
 
@@ -7,5 +8,9 @@ export const metadata: Metadata = {
 };
 
 export default function SomethingToAddPage() {
-  return <SomethingToAddClient />;
+  return (
+    <Suspense fallback={null}>
+      <SomethingToAddClient />
+    </Suspense>
+  );
 }

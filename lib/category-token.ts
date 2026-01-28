@@ -4,7 +4,7 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'crypt
 // CONFIGURATION
 // =============================================================================
 
-const TOKEN_SECRET = process.env.CATEGORY_TOKEN_SECRET;
+const TOKEN_SECRET = process.env.CATEGORY_TOKEN_SECRET || '';
 
 // =============================================================================
 // TYPES
@@ -107,6 +107,10 @@ export function generateCategoryToken(categoryId: number): string {
     t: Date.now(),
   };
 
+  if (!TOKEN_SECRET) {
+    throw new Error('CATEGORY_TOKEN_SECRET is not configured');
+  }
+
   const payloadStr = JSON.stringify(payload);
   const key = deriveKey(TOKEN_SECRET);
 
@@ -152,6 +156,9 @@ export function validateCategoryToken(token: string): TokenValidationResult {
     const encrypted = data.subarray(16);
 
     // Déchiffrer
+    if (!TOKEN_SECRET) {
+      return { valid: false, error: 'invalid_token' as const };
+    }
     const key = deriveKey(TOKEN_SECRET);
     const decipher = createDecipheriv('aes-256-cbc', key, iv);
     const decrypted = Buffer.concat([

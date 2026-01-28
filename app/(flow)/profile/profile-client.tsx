@@ -6,9 +6,15 @@ import MatchingLoader from '@/components/flow/MatchingLoader';
 import { useFlowNavigation } from '@/hooks/useFlowNavigation';
 import type { ProfileData } from '@/types';
 import { useFlowStore } from '@/lib/stores/flow-store';
+
+interface Country {
+  id: number;
+  libelle: string;
+}
+
 interface ProfileClientProps {
-  priorityCountries: string[];
-  otherCountries: string[];
+  priorityCountries: Country[];
+  otherCountries: Country[];
 }
 
 export default function ProfileClient({
