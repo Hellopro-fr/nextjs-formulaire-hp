@@ -43,7 +43,7 @@ export interface AcheteurData {
   adresse?: string;
   code_postal: string;
   ville: string;
-  pays: string;
+  pays: number;
 
   // Profil
   statut: StatutAcheteur;
@@ -141,7 +141,7 @@ export interface DemandeInfoPHPPayload {
   'adresse-acheteur': string;
   'code-postal-acheteur': string;
   'ville-acheteur': string;
-  'pays-acheteur': string;
+  'pays-acheteur': number;
 
   // Fonction/Service
   fonction?: string;

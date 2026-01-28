@@ -48,7 +48,7 @@ function formatPayloadForPHP(
     'adresse-acheteur': acheteur.adresse || '',
     'code-postal-acheteur': acheteur.code_postal,
     'ville-acheteur': acheteur.ville,
-    'pays-acheteur': acheteur.pays || '1', // 1 = France
+    'pays-acheteur': acheteur.pays || 1, // 1 = France
 
     // Fonction/Service
     fonction: acheteur.fonction || '',

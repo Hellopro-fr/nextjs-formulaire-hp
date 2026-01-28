@@ -73,7 +73,7 @@ export function useLeadSubmission(options: UseLeadSubmissionOptions = {}) {
           id_siret_insee: data.profile.company?.siren,
           code_postal: data.profile.postalCode || '',
           ville: data.profile.city || '',
-          pays: data.profile.country || '1', // 1 = France par défaut
+          pays: data.profile.countryID || 1, // 1 = France par défaut
           statut: profileTypeToStatut(data.profile.type),
         },
         message: data.contact.message || 'Demande de devis via UX Matching',
