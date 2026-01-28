@@ -219,7 +219,7 @@ const NeedsQuestionnaire = ({ onComplete, rubriqueId }: NeedsQuestionnaireProps)
     const adaptedQuestion = {
       id: currentQuestion.id || currentIndex + 1,
       title: currentQuestion.title,
-      justification: currentQuestion.justification,
+      justification: currentQuestion.justification || '',
       multiSelect: currentQuestion.type === 'multi',
       answers: currentQuestion.answers?.map((a: { code: string; mainText: string; secondaryText?: string }) => ({
         id: a.code,

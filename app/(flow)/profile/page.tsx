@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import ProfileServer from './profile-server';
 
@@ -7,5 +8,9 @@ export const metadata: Metadata = {
 };
 
 export default function ProfilePage() {
-  return <ProfileServer />;
+  return (
+    <Suspense fallback={null}>
+      <ProfileServer />
+    </Suspense>
+  );
 }

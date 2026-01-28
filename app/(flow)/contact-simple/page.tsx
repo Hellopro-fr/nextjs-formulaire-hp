@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import ContactSimpleClient from './contact-simple-client';
 
@@ -7,5 +8,9 @@ export const metadata: Metadata = {
 };
 
 export default function ContactSimplePage() {
-  return <ContactSimpleClient />;
+  return (
+    <Suspense fallback={null}>
+      <ContactSimpleClient />
+    </Suspense>
+  );
 }

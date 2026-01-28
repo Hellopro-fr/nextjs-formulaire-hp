@@ -170,7 +170,7 @@ export async function middleware(request: NextRequest) {
   }
 
   const token = pathParts[1];
-  const secret = process.env.CATEGORY_TOKEN_SECRET;
+  const secret = process.env.CATEGORY_TOKEN_SECRET || '';
 
   // Valider le token
   const result = await validateTokenInMiddleware(token, secret);

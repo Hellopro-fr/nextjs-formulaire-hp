@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import ChoiceClient from './choice-client';
 
@@ -7,5 +8,9 @@ export const metadata: Metadata = {
 };
 
 export default function ChoicePage() {
-  return <ChoiceClient />;
+  return (
+    <Suspense fallback={null}>
+      <ChoiceClient />
+    </Suspense>
+  );
 }

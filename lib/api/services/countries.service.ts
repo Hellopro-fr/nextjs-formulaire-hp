@@ -32,32 +32,27 @@ export async function fetchCountries(): Promise<ApiResponse<CountriesData>> {
       return {
         data: null,
         error: `Erreur API: ${response.status}`,
-        status: response.status,
       };
     }
 
     const result = await response.json();
 
-
     if (!result.success) {
       return {
         data: null,
         error: result.error || 'Erreur lors de la récupération des pays',
-        status: 400,
       };
     }
 
     return {
       data: result.data,
       error: null,
-      status: 200,
     };
   } catch (error) {
     console.error('Error fetching countries:', error);
     return {
       data: null,
       error: error instanceof Error ? error.message : 'Erreur réseau',
-      status: 500,
     };
   }
 }
