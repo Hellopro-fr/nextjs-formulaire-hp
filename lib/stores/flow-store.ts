@@ -3,9 +3,15 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { useEffect, useState } from 'react';
 import type { ContactFormData, ProfileData, UserAnswers } from '@/types';
 
+// Types de parcours pour le tracking GTM
+export type FlowType = 'principal' | 'pas_assez_produits' | 'pas_trouve_recherchez' | null;
+
 export interface FlowState {
   // ID de la catégorie (depuis le token URL ou query param)
   categoryId: number | null;
+
+  // Type de parcours (pour tracking GTM)
+  flowType: FlowType;
 
   // État du questionnaire
   userAnswers: Record<number, string[]>;
@@ -66,10 +72,12 @@ export interface FlowState {
   setStartTime: (time: number) => void;
   reset: () => void;
   setEntryUrl: (url: string) => void;
+  setFlowType: (flowType: FlowType) => void;
 }
 
 const initialState = {
   categoryId: null,
+  flowType: null as FlowType,
   userAnswers: {},
   otherTexts: {},
   dynamicAnswers: {},
@@ -171,7 +179,9 @@ export const useFlowStore = create<FlowState>()(
       setEntryUrl: (url) => set({ entryUrl: url }),     
 
       setMatchingResults: (results) => set({ matchingResults: results }),
-      
+
+      setFlowType: (flowType) => set({ flowType }),
+
     }),
     {
       name: 'flow-storage',

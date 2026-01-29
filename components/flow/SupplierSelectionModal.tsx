@@ -19,6 +19,7 @@ import {
   trackComparisonModalView,
   trackProductSelectionChange,
   trackProductModalView,
+  setFlowType,
 } from "@/lib/analytics";
 import { Supplier } from "@/types";
 
@@ -49,8 +50,8 @@ const SupplierSelectionModal = ({RECOMMENDED_SUPPLIERS, OTHER_SUPPLIERS, userAns
   const [showCriteriaChangedBanner, setShowCriteriaChangedBanner] = useState(false);
   const [mobileViewMode, setMobileViewMode] = useState<"grid" | "list">("list");
 
-  // Zustand store pour la sélection des fournisseurs
-  const { selectedSupplierIds, setSelectedSupplierIds } = useFlowStore();
+  // Zustand store pour la sélection des fournisseurs et le flowType
+  const { selectedSupplierIds, setSelectedSupplierIds, setFlowType: setStoreFlowType } = useFlowStore();
 
   // Convertir le tableau en Set pour les opérations
   const selectedIds = useMemo(() => new Set(selectedSupplierIds), [selectedSupplierIds]);
@@ -362,7 +363,13 @@ const SupplierSelectionModal = ({RECOMMENDED_SUPPLIERS, OTHER_SUPPLIERS, userAns
           )}
 
           {viewState === "custom-need" && (
-            <CustomNeedForm onBack={() => setViewState("selection")} />
+            <CustomNeedForm onBack={() => {
+              // Remettre flowType à 'principal' quand l'utilisateur annule
+              // depuis le formulaire "pas trouvé ce que vous cherchez"
+              setStoreFlowType('principal');
+              setFlowType('principal');
+              setViewState("selection");
+            }} />
           )}
         </div>
 
@@ -409,7 +416,12 @@ const SupplierSelectionModal = ({RECOMMENDED_SUPPLIERS, OTHER_SUPPLIERS, userAns
               </button>
               
               <button
-                onClick={() => setViewState("custom-need")}
+                onClick={() => {
+                  // Définir flowType = 'pas_trouve_recherchez' car l'utilisateur a cliqué "pas trouvé"
+                  setStoreFlowType('pas_trouve_recherchez');
+                  setFlowType('pas_trouve_recherchez');
+                  setViewState("custom-need");
+                }}
                 className="hidden flex-1 sm:flex-none h-11 rounded-lg border-2 border-muted-foreground/30 bg-muted/50 px-4 text-sm font-medium text-foreground hover:bg-muted hover:border-muted-foreground/50 transition-colors flex items-center justify-center"
               >
                 Pas trouvé ce que vous cherchez ?

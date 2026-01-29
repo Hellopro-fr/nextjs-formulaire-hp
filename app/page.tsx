@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import QuestionnaireClient from './(flow)/questionnaire/questionnaire-client';
 
@@ -21,9 +22,11 @@ export default async function Home({ searchParams }: PageProps) {
   const token = params.token;
 
   return (
-    <QuestionnaireClient
-      initialCategoryId={typeof categoryId === 'string' ? categoryId : undefined}
-      initialToken={typeof token === 'string' ? token : undefined}
-    />
+    <Suspense fallback={null}>
+      <QuestionnaireClient
+        initialCategoryId={typeof categoryId === 'string' ? categoryId : undefined}
+        initialToken={typeof token === 'string' ? token : undefined}
+      />
+    </Suspense>
   );
 }

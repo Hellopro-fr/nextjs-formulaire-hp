@@ -6,6 +6,8 @@
 
 type StepType = 'init' | 'question' | 'choix-propart' | 'selection' | 'contact' | 'conversion';
 
+type FlowType = 'principal' | 'pas_assez_produits' | 'pas_trouve_recherchez' | null;
+
 interface FunnelContext {
   rubrique_id?: number;
   rubrique_name?: string;
@@ -101,9 +103,10 @@ export function resetTrackingState(): void {
   // Supprimer le session_id pour en générer un nouveau
   sessionStorage.removeItem('hp_session_id');
 
-  // Réinitialiser le contexte funnel et le step index
+  // Réinitialiser le contexte funnel, le step index et le flow type
   funnelContext = {};
   currentStepIndex = 0;
+  currentFlowType = null;
 }
 
 /**
@@ -152,6 +155,7 @@ function getPageLocationUri(): string {
 // =============================================================================
 
 let funnelContext: FunnelContext = {};
+let currentFlowType: FlowType = null;
 
 /**
  * Initialiser le contexte du funnel (à appeler au début)
@@ -165,6 +169,21 @@ export function setFunnelContext(context: FunnelContext) {
  */
 export function getFunnelContext(): FunnelContext {
   return funnelContext;
+}
+
+/**
+ * Définir le type de parcours (pour tracking)
+ * @param flowType - 'principal' | 'pas_assez_produits' | 'pas_trouve_recherchez'
+ */
+export function setFlowType(flowType: FlowType) {
+  currentFlowType = flowType;
+}
+
+/**
+ * Récupérer le type de parcours actuel
+ */
+export function getFlowType(): FlowType {
+  return currentFlowType;
 }
 
 // =============================================================================
@@ -193,6 +212,9 @@ export function trackQuoteFunnel(
     rubrique_id: funnelContext.rubrique_id,
     rubrique_name: funnelContext.rubrique_name,
     page_location_uri: getPageLocationUri(),
+
+    // Type de parcours (null si pas encore déterminé)
+    flow_type: currentFlowType,
 
     // Identifiants
     user_id: userId,
@@ -323,15 +345,16 @@ export function trackProductSelectionChange(
   action: 'ajouter' | 'retirer',
   totalSelected: number
 ) {
-  // Vérifier si c'est la première action de ce type pour cet utilisateur dans la session
-  const actionKey = `product_selection_${action}`;
-  const isFirstActionOfType = isFirstView(actionKey);
+  // Vérifier si c'est la première action de chaque type pour cet utilisateur dans la session
+  const isFirstAdd = action === 'ajouter' && isFirstView('product_selection_ajouter');
+  const isFirstRemove = action === 'retirer' && isFirstView('product_selection_retirer');
 
   trackQuoteFunnel(currentStepIndex, 'product-selection', 'selection', {
     product_id: productId,
     action,
     total_selected: totalSelected,
-    is_first_action: isFirstActionOfType,
+    is_first_add: isFirstAdd,
+    is_first_remove: isFirstRemove,
   });
 }
 
@@ -442,17 +465,14 @@ export function trackCriteriaModified(criteriaCount: number, modifiedFields: str
 /**
  * Track l'arrivée sur la page "Quelque chose à ajouter" (/something-to-add) - Étape 1: Votre besoin
  * Cette page s'affiche quand il y a peu de produits correspondant à la recherche
+ * ou quand l'utilisateur clique "pas trouvé ce que vous cherchez"
  */
 export function trackCustomNeedPageView() {
-  const userId = getUserId();
-  const sessionId = getSessionId();
+  currentStepIndex++;
   const isFirstViewForSession = isFirstView('custom_need_page');
 
-  pushToDataLayer('vue_page_votre_besoin', {
-    user_id: userId,
-    session_id: sessionId,
+  trackQuoteFunnel(currentStepIndex, 'description-besoin', 'contact', {
     is_first_view: isFirstViewForSession,
-    timestamp: new Date().toISOString(),
   });
 }
 
@@ -460,14 +480,8 @@ export function trackCustomNeedPageView() {
  * Track l'affichage de l'étape coordonnées sur /something-to-add - Étape 2: Vos coordonnées
  */
 export function trackCustomNeedContactView() {
-  const userId = getUserId();
-  const sessionId = getSessionId();
-
-  pushToDataLayer('vue_page_vos_coordonnees', {
-    user_id: userId,
-    session_id: sessionId,
-    timestamp: new Date().toISOString(),
-  });
+  currentStepIndex++;
+  trackQuoteFunnel(currentStepIndex, 'formulaire-contact-simple', 'contact');
 }
 
 /**

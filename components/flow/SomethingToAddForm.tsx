@@ -8,7 +8,7 @@ import { useBuyerCheck } from "@/hooks/api";
 import { useFlowStore } from "@/lib/stores/flow-store";
 import { ContactFormData } from "@/types";
 import PhoneInput from "./PhoneInput";
-import { trackCustomNeedPageView, trackCustomNeedContactView } from "@/lib/analytics";
+import { trackCustomNeedPageView, trackCustomNeedContactView, setFlowType } from "@/lib/analytics";
 
 // Mock list of existing buyers in database
 const EXISTING_BUYERS = [
@@ -32,8 +32,10 @@ const SomethingToAddForm = ({ onNext, onBack }: SomethingToAddFormProps) => {
 
    const {
     setContactData,
-    files: filesStore,     
-    addFilesStore
+    files: filesStore,
+    addFilesStore,
+    flowType,
+    setFlowType: setStoreFlowType
   } = useFlowStore();
 
   const [currentStep, setCurrentStep] = useState(1);
@@ -56,13 +58,22 @@ const SomethingToAddForm = ({ onNext, onBack }: SomethingToAddFormProps) => {
   // Ref pour éviter les doubles appels en StrictMode
   const hasTrackedPageView = useRef(false);
 
-  // Track page view au montage
+  // Track page view au montage et définir flowType si pas déjà défini
   useEffect(() => {
     if (!hasTrackedPageView.current) {
       hasTrackedPageView.current = true;
+
+      // Si flowType n'est pas défini (redirection automatique car pas assez de produits)
+      // Le définir comme 'pas_assez_produits'
+      // Si déjà 'pas_trouve_recherchez' (clic "pas trouvé"), on garde cette valeur
+      if (!flowType) {
+        setStoreFlowType('pas_assez_produits');
+        setFlowType('pas_assez_produits');
+      }
+
       trackCustomNeedPageView();
     }
-  }, []);
+  }, [flowType, setStoreFlowType]);
 
   // Check if email is from an existing buyer
   // const isExistingBuyer = useMemo(() => {
