@@ -38,6 +38,7 @@ const ContactForm = ({ selectedSuppliers, onBack }: ContactFormProps) => {
 
   const [formData, setFormData] = useState<ContactFormData>({
     email: "",
+    isKnown: false,
     firstName: "",
     lastName: "",
     company: profileData?.company?.name || profileData?.companyName || "",
@@ -88,6 +89,7 @@ const ContactForm = ({ selectedSuppliers, onBack }: ContactFormProps) => {
       updatedData = {
         ...formData,                   // On garde le message et les autres champs
         email    : formData.email,      // L'email déjà saisi
+        isKnown  : true,
         firstName: info.prenom || "",
         lastName : info.nom || "",
         phone    : info.tel || "",
@@ -98,6 +100,7 @@ const ContactForm = ({ selectedSuppliers, onBack }: ContactFormProps) => {
       updatedData = {
         ...formData, 
         email      : formData.email,
+        isKnown    : false,
         firstName  : "",
         lastName   : "",
         phone      : "",

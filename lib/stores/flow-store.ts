@@ -30,6 +30,15 @@ export interface FlowState {
 
   entryUrl: string | null;
 
+  equivalenceCaracteristique: any[];
+
+  matchingResults: {
+    recommended: any[];
+    others: any[];
+  } | null;
+
+  setMatchingResults: (results: { recommended: any[], others: any[] }) => void;
+
   setFilesStore: (files: File[]) => void;
   addFilesStore: (newFiles: File[]) => void;
 
@@ -46,6 +55,8 @@ export interface FlowState {
     codes: string[], 
     equivalences?: any[]
   ) => void;
+
+  setEquivalenceCaracteristique: (equivalences: any[]) => void;
 
   resetDynamicAnswers: () => void;
   setProfileData: (data: ProfileData) => void;
@@ -68,7 +79,9 @@ const initialState = {
   selectedSupplierIds: [],
   startTime: null,
   files: [],
-  entryUrl: ""
+  entryUrl: "",
+  equivalenceCaracteristique: [],
+  matchingResults: null,
 };
 
 export const useFlowStore = create<FlowState>()(
@@ -119,6 +132,8 @@ export const useFlowStore = create<FlowState>()(
           },
         })),
 
+      setEquivalenceCaracteristique: (data) => set({ equivalenceCaracteristique: data }),
+
       // resetDynamicAnswers: () => set({ dynamicAnswers: {} }),
 
       // N'oubliez pas de mettre à jour la fonction reset si vous en avez une
@@ -154,6 +169,8 @@ export const useFlowStore = create<FlowState>()(
       reset: () => set(initialState),
 
       setEntryUrl: (url) => set({ entryUrl: url }),     
+
+      setMatchingResults: (results) => set({ matchingResults: results }),
       
     }),
     {
