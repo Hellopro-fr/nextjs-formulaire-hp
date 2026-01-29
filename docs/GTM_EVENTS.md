@@ -34,6 +34,9 @@ Cet événement unique track toute la progression de l'utilisateur dans le funne
   page_location_uri: string, // URL de la page
   abtest1: string,           // Variante A/B test
 
+  // Type de parcours (voir section "Parcours utilisateur")
+  flow_type: string | null,  // 'principal' | 'pas_assez_produits' | 'pas_trouve_recherchez' | null
+
   // Identifiants
   user_id: string,           // ID utilisateur (persistant localStorage)
   session_id: string,        // ID session (sessionStorage)
@@ -52,6 +55,48 @@ Cet événement unique track toute la progression de l'utilisateur dans le funne
 | `selection` | Sélection des fournisseurs |
 | `contact` | Formulaire de contact |
 | `conversion` | Soumission finale |
+
+### Types de parcours (flow_type)
+
+Le champ `flow_type` permet d'identifier le parcours emprunté par l'utilisateur. Il est `null` pour les premières étapes (avant le branchement) puis défini une fois le parcours déterminé.
+
+| flow_type | Déclencheur | Description |
+|-----------|-------------|-------------|
+| `principal` | Arrivée sur `/selection` | Parcours standard avec sélection de produits |
+| `pas_assez_produits` | Redirection automatique vers `/something-to-add` | Pas assez de produits correspondants, l'utilisateur décrit son besoin |
+| `pas_trouve_recherchez` | Clic "Pas trouvé ce que vous cherchez ?" sur `/selection` | L'utilisateur a vu les produits mais n'a pas trouvé son besoin |
+| `null` | Avant le branchement | Parcours pas encore déterminé (questionnaire, profil) |
+
+#### Schéma des parcours
+
+```
+                    questionnaire-start (flow_type: null)
+                              │
+                              ▼
+                      choix-propart (flow_type: null)
+                              │
+               ┌──────────────┴──────────────┐
+               ▼                              ▼
+      assez de produits              pas assez de produits
+               │                              │
+               ▼                              ▼
+    selection-produits              description-besoin
+   (flow_type: 'principal')    (flow_type: 'pas_assez_produits')
+               │                              │
+    ┌──────────┴──────────┐                   ▼
+    ▼                     ▼         formulaire-contact-simple
+ continue         clique "pas trouvé"         │
+    │                     │                   ▼
+    ▼                     ▼             submit-success
+formulaire-contact   description-besoin
+    │            (flow_type: 'pas_trouve_recherchez')
+    ▼                     │
+submit-success            ▼
+                 formulaire-contact-simple
+                          │
+                          ▼
+                    submit-success
+```
 
 ### Étapes détaillées (step_name)
 
@@ -111,21 +156,34 @@ Cet événement unique track toute la progression de l'utilisateur dans le funne
   product_id: string,         // ID produit
   product_name: string,       // Nom produit
   match_score: number,        // Score de correspondance
-  action: string,             // 'view_details' | 'toggle_select' | 'add' | 'remove'
+  action: string,             // 'view_details' | 'toggle_select' | 'ajouter' | 'retirer'
   total_selected: number,     // Nombre de produits sélectionnés
-  is_first_action: boolean,   // Première action add/remove de la session (pour déduplication)
+  is_first_add: boolean,      // true uniquement lors du premier ajout de la session
+  is_first_remove: boolean,   // true uniquement lors du premier retrait de la session
   products_compared: string[], // IDs des produits comparés
   products_count: number      // Nombre de produits comparés
 }
 ```
 
-#### Formulaire de contact
+#### Formulaire de contact (parcours principal)
 | step_name | step_type | Description |
 |-----------|-----------|-------------|
-| `formulaire-contact` | `contact` | Affichage formulaire |
+| `formulaire-contact` | `contact` | Affichage formulaire (parcours principal) |
 | `champ-coordonnees-N` | `contact` | Remplissage champ N |
-| `submit-attempt` | `contact` | Tentative de soumission |
 | `validation-error` | `contact` | Erreur de validation |
+
+#### Parcours alternatif (description du besoin)
+| step_name | step_type | flow_type | Description |
+|-----------|-----------|-----------|-------------|
+| `description-besoin` | `contact` | `pas_assez_produits` ou `pas_trouve_recherchez` | Page "Votre besoin" - description libre |
+| `formulaire-contact-simple` | `contact` | `pas_assez_produits` ou `pas_trouve_recherchez` | Formulaire de coordonnées simplifié |
+
+**Données additionnelles pour `description-besoin` :**
+```javascript
+{
+  is_first_view: boolean    // Première vue de la session
+}
+```
 
 **Données additionnelles :**
 ```javascript
@@ -208,32 +266,17 @@ Modification effective des critères.
 }
 ```
 
-### `vue_page_votre_besoin`
+### `vue_page_votre_besoin` *(DEPRECATED)*
+
+> **⚠️ DEPRECATED** : Cet événement est remplacé par `devis_funnel_formulaire` avec `step_name: 'description-besoin'`.
 
 Arrivée sur la page `/something-to-add` - Étape 1: "Votre besoin" (affichée quand il y a peu de produits correspondant à la recherche).
 
-```javascript
-{
-  event: 'vue_page_votre_besoin',
-  user_id: string,
-  session_id: string,
-  is_first_view: boolean,
-  timestamp: string
-}
-```
+### `vue_page_vos_coordonnees` *(DEPRECATED)*
 
-### `vue_page_vos_coordonnees`
+> **⚠️ DEPRECATED** : Cet événement est remplacé par `devis_funnel_formulaire` avec `step_name: 'formulaire-contact-simple'`.
 
 Passage à l'étape 2: "Vos coordonnées" sur la page `/something-to-add`.
-
-```javascript
-{
-  event: 'vue_page_vos_coordonnees',
-  user_id: string,
-  session_id: string,
-  timestamp: string
-}
-```
 
 ### `vue_modal_produit`
 
@@ -368,6 +411,20 @@ Sources de trafic (paramètres UTM).
 | `trackLeadSubmitted(id, count, type)` | Lead soumis |
 | `trackLeadSubmissionError(type, message)` | Erreur soumission |
 
+### Gestion du parcours (flow_type)
+
+| Fonction | Description |
+|----------|-------------|
+| `setFlowType(flowType)` | Définir le type de parcours ('principal', 'pas_assez_produits', 'pas_trouve_recherchez') |
+| `getFlowType()` | Récupérer le type de parcours actuel |
+
+### Parcours alternatif (description du besoin)
+
+| Fonction | Description |
+|----------|-------------|
+| `trackCustomNeedPageView()` | Page "Description besoin" → `devis_funnel_formulaire` { step_name: 'description-besoin' } |
+| `trackCustomNeedContactView()` | Formulaire coordonnées simplifié → `devis_funnel_formulaire` { step_name: 'formulaire-contact-simple' } |
+
 ### Événements secondaires
 
 | Fonction | Description |
@@ -375,10 +432,7 @@ Sources de trafic (paramètres UTM).
 | `trackCompanySearch(query, results)` | Recherche entreprise |
 | `trackModifyCriteriaModalView()` | Modal critères |
 | `trackCriteriaModified(count, fields)` | Critères modifiés |
-| `trackCustomNeedPageView()` | Page /something-to-add - Étape 1: Votre besoin |
-| `trackCustomNeedContactView()` | Page /something-to-add - Étape 2: Vos coordonnées |
 | `trackProductModalView(productId, productName, supplierId)` | Modal produit |
-| `identifyUser(email, profileType, companyName)` | Identifier utilisateur |
 | `trackFunnelAbandonment(step, number, time, action)` | Abandon funnel |
 | `trackDeviceInfo()` | Info appareil |
 | `trackTrafficSource()` | Source trafic |
@@ -398,6 +452,7 @@ Sources de trafic (paramètres UTM).
 - `step_name` - Data Layer Variable
 - `step_type` - Data Layer Variable
 - `step_index` - Data Layer Variable
+- `flow_type` - Data Layer Variable
 - `conversion` - Data Layer Variable
 - `user_id` - Data Layer Variable
 - `profile_type` - Data Layer Variable
@@ -458,6 +513,16 @@ Sources de trafic (paramètres UTM).
 | Affichage besoin différent | `vue_page_votre_besoin` | COUNT(*) | COUNT(*) WHERE `is_first_view = true` |
 | Affichage tableau comparatif | `comparison-modal` | COUNT(*) | COUNT(*) WHERE `is_first_view = true` |
 | Affichage popup produit | `vue_modal_produit` | COUNT(*) | COUNT(*) WHERE `is_first_view = true` |
-| Clics ajouter sélection | `product-selection` | COUNT(*) WHERE `action = 'add'` | COUNT(*) WHERE `action = 'add'` AND `is_first_action = true` |
-| Clics retirer sélection | `product-selection` | COUNT(*) WHERE `action = 'remove'` | COUNT(*) WHERE `action = 'remove'` AND `is_first_action = true` |
+| Clics ajouter sélection | `product-selection` | COUNT(*) WHERE `action = 'ajouter'` | COUNT(*) WHERE `is_first_add = true` |
+| Clics retirer sélection | `product-selection` | COUNT(*) WHERE `action = 'retirer'` | COUNT(*) WHERE `is_first_remove = true` |
 | Modification effective critères | `critere_modifie` | COUNT(*) | COUNT(DISTINCT user_id) |
+
+### Analyse par type de parcours (flow_type)
+
+| KPI | Événement | Filtre |
+|-----|-----------|--------|
+| Conversions parcours principal | `devis_funnel_formulaire` | `step_name = 'submit-success'` AND `flow_type = 'principal'` |
+| Conversions parcours "pas assez produits" | `devis_funnel_formulaire` | `step_name = 'submit-success'` AND `flow_type = 'pas_assez_produits'` |
+| Conversions parcours "pas trouvé" | `devis_funnel_formulaire` | `step_name = 'submit-success'` AND `flow_type = 'pas_trouve_recherchez'` |
+| Nb redirections automatiques | `devis_funnel_formulaire` | `step_name = 'description-besoin'` AND `flow_type = 'pas_assez_produits'` |
+| Nb clics "pas trouvé" | `devis_funnel_formulaire` | `step_name = 'description-besoin'` AND `flow_type = 'pas_trouve_recherchez'` |

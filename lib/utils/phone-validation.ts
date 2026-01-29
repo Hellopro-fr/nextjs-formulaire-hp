@@ -22,8 +22,8 @@ export const PHONE_COUNTRIES: Record<string, PhoneCountryConfig> = {
     placeholder: '6 12 34 56 78',
     mask: '# 00 00 00 00',
     regex: /^\d\s\d{2}\s\d{2}\s\d{2}\s\d{2}$/,
-    minLength: 10,
-    maxLength: 10,
+    minLength: 9,
+    maxLength: 9,
   },
   '+32': {
     id: 4,
@@ -42,8 +42,8 @@ export const PHONE_COUNTRIES: Record<string, PhoneCountryConfig> = {
     placeholder: '6 50 12 34 56',
     mask: '0 00 00 00 00',
     regex: /^\d{1}\s\d{2}\s\d{2}\s\d{2}\s\d{2}$/,
-    minLength: 10,
-    maxLength: 10,
+    minLength: 9,
+    maxLength: 9,
   },
   '+213': {
     id: 224,
@@ -112,8 +112,8 @@ export const PHONE_COUNTRIES: Record<string, PhoneCountryConfig> = {
     placeholder: '6 71 23 45 67',
     mask: '0 00 00 00 00',
     regex: /^\d\s\d{2}\s\d{2}\s\d{2}\s\d{2}$/,
-    minLength: 10,
-    maxLength: 10,
+    minLength: 9,
+    maxLength: 9,
   },
 };
 

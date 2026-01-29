@@ -6,8 +6,8 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: nextjs-app
-    ports:
-      - "3000:3000"
+    network_mode: host
     environment:
       - NODE_ENV=production
+      - HELLOPRO_API_URL=http://dev-api.hellopro.fr
     restart: unless-stopped
