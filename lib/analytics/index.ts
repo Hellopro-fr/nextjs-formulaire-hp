@@ -3,6 +3,8 @@ export {
   pushToDataLayer,
   setFunnelContext,
   getFunnelContext,
+  setFlowType,
+  getFlowType,
   trackQuoteFunnel,
   trackFunnelStart as trackGTMFunnelStart,
   trackQuestionView,
