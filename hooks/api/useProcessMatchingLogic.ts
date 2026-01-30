@@ -71,45 +71,42 @@ export function useProcessMatchingLogic() {
     
     setShowLoader(true);
 
-    return useQuery({
-      queryKey: ['suppliers'],
-      queryFn: async () => {
-        
+    try {
 
-        const metadonnee_utilisateurs = {
-            "pays": "France",
-            "typologie": "1"
-        } ;
+      const metadonnee_utilisateurs = {
+          "pays": "France",
+          "typologie": "1"
+      } ;
 
-        const formData = new FormData();
-        formData.append('id_categorie', categoryId?.toString() || '');
-        formData.append('top_k', '12');
-        formData.append('metadonnee_utilisateurs', JSON.stringify(metadonnee_utilisateurs));
-        formData.append('liste_caracteristique', JSON.stringify(cleanedEquivalences));
+      const formData = new FormData();
+      formData.append('id_categorie', categoryId?.toString() || '');
+      formData.append('top_k', '12');
+      formData.append('metadonnee_utilisateurs', JSON.stringify(metadonnee_utilisateurs));
+      formData.append('liste_caracteristique', JSON.stringify(cleanedEquivalences));
 
-        const apiBase = getApiBasePath();
-        const apiUrl = `${apiBase}/api/matching`;
-        
-        const res = await fetch(apiUrl, {
-          method: 'POST',
-          body: formData,
-        });
+      const apiBase = getApiBasePath();
+      const apiUrl = `${apiBase}/api/matching`;
+      
+      const res = await fetch(apiUrl, {
+        method: 'POST',
+        body: formData,
+      });
 
-        if (!res.ok) throw new Error('Failed to fetch Q1');
+      if (!res.ok) throw new Error('Failed to fetch Q1');
 
-        let apiData = await res.json();
-        apiData = apiData.response;
+      let apiData = await res.json();
+      apiData = apiData.response;
 
-        const dataReturn = {
-          entryQuestion: normalizeSupplier(apiData),
-        };
+      const dataReturn = {
+        entryQuestion: normalizeSupplier(apiData),
+      };
 
-        //TODO
-        //setMatchingResults
+      //TODO
+      //setMatchingResults
 
-        return dataReturn;
-      },
-    });
+    } catch (error) {
+      console.error('Matching process error:', error);
+    }
   
   };
 
