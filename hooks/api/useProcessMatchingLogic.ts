@@ -1,10 +1,24 @@
 import { useState } from 'react';
 import { useFlowStore } from '@/lib/stores/flow-store';
 import type { ProfileData } from '@/types';
+import { fetchSuppliers } from '@/lib/api/services/suppliers.service';
+import { useQuery } from '@tanstack/react-query';
+
+import { basePath } from '@/lib/utils';
+
+// Toujours utiliser le proxy Next.js pour éviter les problèmes CORS
+const getApiBasePath = () => {
+  return basePath || '';
+};
+
+function normalizeSupplier(SupplierData: any) {
+  return {};
+}
 
 export function useProcessMatchingLogic() {
   const [showLoader, setShowLoader] = useState(false);
-  const { 
+  const {
+    categoryId,
     dynamicEquivalences, 
     setEquivalenceCaracteristique, 
     setMatchingResults 
@@ -57,26 +71,46 @@ export function useProcessMatchingLogic() {
     
     setShowLoader(true);
 
-    try {
-      const response = await fetch('/api/matching', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          profile: data,
-          equivalences: cleanedEquivalences,
-        }),
-      });
+    return useQuery({
+      queryKey: ['suppliers'],
+      queryFn: async () => {
+        
 
-      const results = await response.json();
+        const metadonnee_utilisateurs = {
+            "pays": "France",
+            "typologie": "1"
+        } ;
 
-      setMatchingResults({
-        recommended: results.recommended,
-        others: results.others
-      });
+        const formData = new FormData();
+        formData.append('id_categorie', categoryId?.toString() || '');
+        formData.append('top_k', '12');
+        formData.append('metadonnee_utilisateurs', JSON.stringify(metadonnee_utilisateurs));
+        formData.append('liste_caracteristique', JSON.stringify(cleanedEquivalences));
 
-    } catch (error) {
-      console.error("Erreur lors du matching:", error);
-    }
+        const apiBase = getApiBasePath();
+        const apiUrl = `${apiBase}/api/matching`;
+        
+        const res = await fetch(apiUrl, {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!res.ok) throw new Error('Failed to fetch Q1');
+
+        let apiData = await res.json();
+        apiData = apiData.response;
+
+        const dataReturn = {
+          entryQuestion: normalizeSupplier(apiData),
+        };
+
+        //TODO
+        //setMatchingResults
+
+        return dataReturn;
+      },
+    });
+  
   };
 
   return {
