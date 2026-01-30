@@ -1,50 +1,156 @@
 'use client';
 
-import { Plus, X, GripVertical, Sparkles, Target, Gift, Check } from "lucide-react";
+import { X, GripVertical, Sparkles, Target, Gift, Check } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { trackModifyCriteriaModalView, trackCriteriaModified } from "@/lib/analytics";
+import { useFlowStore } from "@/lib/stores/flow-store";
+import type {
+  ConsolidatedCharacteristic,
+  PoidsCaracteristique,
+} from "@/lib/utils/equivalence-merger";
 
 interface ModifyCriteriaFormProps {
   onBack: () => void;
+  onApply: (updatedEquivalences: ConsolidatedCharacteristic[]) => void;
 }
 
-interface Criterion {
-  id: string;
+// =============================================================================
+// TYPES INTERNES POUR L'ÉTAT DU FORMULAIRE
+// =============================================================================
+
+/** Représentation d'un critère dans le formulaire */
+interface CriterionFormState {
+  id_caracteristique: number;
+  /** Label affiché (sera fourni par l'API caractéristiques à terme) */
   label: string;
-  value: string | string[];
-  isMulti?: boolean;
+  type: 'textuelle' | 'numerique';
+  /** Poids de la question d'origine (conservé, envoyé à l'API) */
+  poids_question: number;
+  poids_caracteristique: PoidsCaracteristique;
+  unite?: string;
+
+  // --- Valeurs éditables ---
+  valeurs_cibles_ids: number[];
+  valeurs_bloquantes_ids: number[];
+  valeur_numerique_exact?: number;
+  valeur_numerique_min?: number;
+  valeur_numerique_max?: number;
+
+  // --- Options disponibles (à remplir via API caractéristiques) ---
+  options_disponibles: { id: number; label: string }[];
 }
 
-const AVAILABLE_CRITERIA = [
-  { id: "type", label: "Type de pont", options: ["2 colonnes", "4 colonnes", "Ciseaux", "Fosse"], isMulti: false },
-  { id: "capacity", label: "Capacité", options: ["2,5 tonnes", "3 tonnes", "3,5 tonnes", "4 tonnes", "5 tonnes", "6 tonnes"], isMulti: false },
-  { id: "voltage", label: "Alimentation", options: ["230V monophasé", "400V triphasé"], isMulti: true },
-  { id: "zone", label: "Zone géographique", options: ["Île-de-France", "Paris (75)", "Nord", "Est", "Ouest", "Sud", "France entière"], isMulti: false },
-  { id: "traverse", label: "Traverse supérieure", options: ["Oui", "Non"], isMulti: false },
-  { id: "bras", label: "Bras télescopiques", options: ["Oui", "Non"], isMulti: false },
-  { id: "led", label: "Éclairage LED", options: ["Oui", "Non"], isMulti: false },
-  { id: "antichute", label: "Protection anti-chute", options: ["Oui", "Non"], isMulti: false },
-];
+// =============================================================================
+// HELPERS : ConsolidatedCharacteristic <-> CriterionFormState
+// =============================================================================
 
-const ModifyCriteriaForm = ({ onBack }: ModifyCriteriaFormProps) => {
-  const [essentialCriteria, setEssentialCriteria] = useState<Criterion[]>([
-    { id: "type", label: "Type de pont", value: "2 colonnes" },
-    { id: "capacity", label: "Capacité", value: "4 tonnes" },
-    { id: "voltage", label: "Alimentation", value: ["400V triphasé"], isMulti: true },
-  ]);
+function characteristicToFormState(c: ConsolidatedCharacteristic): CriterionFormState {
+  const state: CriterionFormState = {
+    id_caracteristique: c.id_caracteristique,
+    label: `Caractéristique #${c.id_caracteristique}`,
+    type: c.type_caracteristique,
+    poids_question: c.poids_question,
+    poids_caracteristique: c.poids_caracteristique,
+    unite: c.unite,
+    valeurs_cibles_ids: [],
+    valeurs_bloquantes_ids: [],
+    options_disponibles: [],
+  };
 
-  const [nonEssentialCriteria, setNonEssentialCriteria] = useState<Criterion[]>([
-    { id: "traverse", label: "Traverse supérieure", value: "Oui" },
-    { id: "zone", label: "Zone géographique", value: "Île-de-France" },
-  ]);
+  if (c.type_caracteristique === 'textuelle') {
+    state.valeurs_cibles_ids = Array.isArray(c.valeurs_cibles)
+      ? [...(c.valeurs_cibles as number[])]
+      : [];
+    state.valeurs_bloquantes_ids = [...c.valeurs_bloquantes];
+    // TODO: Remplir options_disponibles via appel API caractéristiques
+    // Pour l'instant, on crée des options à partir des valeurs connues
+    const allKnownIds = [...new Set([...state.valeurs_cibles_ids, ...state.valeurs_bloquantes_ids])];
+    state.options_disponibles = allKnownIds.map(id => ({
+      id,
+      label: `Valeur ${id}`,
+    }));
+  } else {
+    const val = c.valeurs_cibles;
+    if (val && !Array.isArray(val)) {
+      state.valeur_numerique_exact = val.exact;
+      state.valeur_numerique_min = val.min;
+      state.valeur_numerique_max = val.max;
+    }
+  }
 
-  const [showAddEssential, setShowAddEssential] = useState(false);
-  const [showAddNonEssential, setShowAddNonEssential] = useState(false);
+  return state;
+}
 
-  // Ref pour éviter les doubles appels en StrictMode
+function formStateToCharacteristic(s: CriterionFormState): ConsolidatedCharacteristic {
+  const result: ConsolidatedCharacteristic = {
+    id_caracteristique: s.id_caracteristique,
+    type_caracteristique: s.type,
+    poids_question: s.poids_question,
+    poids_caracteristique: s.poids_caracteristique,
+    valeurs_cibles: [],
+    valeurs_bloquantes: [],
+  };
+
+  if (s.unite) {
+    result.unite = s.unite;
+  }
+
+  if (s.type === 'textuelle') {
+    result.valeurs_cibles = [...s.valeurs_cibles_ids];
+    result.valeurs_bloquantes = [...s.valeurs_bloquantes_ids];
+  } else {
+    if (s.valeur_numerique_exact !== undefined) {
+      result.valeurs_cibles = { exact: s.valeur_numerique_exact };
+    } else {
+      const numVal: { min?: number; max?: number } = {};
+      if (s.valeur_numerique_min !== undefined) numVal.min = s.valeur_numerique_min;
+      if (s.valeur_numerique_max !== undefined) numVal.max = s.valeur_numerique_max;
+      result.valeurs_cibles = Object.keys(numVal).length > 0 ? numVal : [];
+    }
+    result.valeurs_bloquantes = [];
+  }
+
+  return result;
+}
+
+// =============================================================================
+// COMPOSANT PRINCIPAL
+// =============================================================================
+
+const ModifyCriteriaForm = ({ onBack, onApply }: ModifyCriteriaFormProps) => {
+  const { equivalenceCaracteristique } = useFlowStore();
+
+  const [critiqueCriteria, setCritiqueCriteria] = useState<CriterionFormState[]>([]);
+  const [secondaireCriteria, setSecondaireCriteria] = useState<CriterionFormState[]>([]);
+
   const hasTrackedView = useRef(false);
+  const hasInitialized = useRef(false);
 
-  // Track modal view on mount (only once per session)
+  // Initialiser les critères depuis le store (une seule fois)
+  useEffect(() => {
+    if (hasInitialized.current) return;
+    hasInitialized.current = true;
+
+    const consolidated = equivalenceCaracteristique as ConsolidatedCharacteristic[];
+    if (!consolidated || consolidated.length === 0) return;
+
+    const critiques: CriterionFormState[] = [];
+    const secondaires: CriterionFormState[] = [];
+
+    for (const c of consolidated) {
+      const formState = characteristicToFormState(c);
+      if (c.poids_caracteristique === 'critique') {
+        critiques.push(formState);
+      } else {
+        secondaires.push(formState);
+      }
+    }
+
+    setCritiqueCriteria(critiques);
+    setSecondaireCriteria(secondaires);
+  }, [equivalenceCaracteristique]);
+
+  // Track modal view on mount
   useEffect(() => {
     if (!hasTrackedView.current) {
       hasTrackedView.current = true;
@@ -52,88 +158,97 @@ const ModifyCriteriaForm = ({ onBack }: ModifyCriteriaFormProps) => {
     }
   }, []);
 
-  const getAvailableCriteria = (currentList: Criterion[], otherList: Criterion[]) => {
-    const usedIds = [...currentList, ...otherList].map(c => c.id);
-    return AVAILABLE_CRITERIA.filter(c => !usedIds.includes(c.id));
-  };
+  // =========================================================================
+  // ACTIONS
+  // =========================================================================
 
-  const addCriterion = (criterionDef: typeof AVAILABLE_CRITERIA[0], isEssential: boolean) => {
-    const newCriterion: Criterion = {
-      id: criterionDef.id,
-      label: criterionDef.label,
-      value: criterionDef.isMulti ? [criterionDef.options[0]] : criterionDef.options[0],
-      isMulti: criterionDef.isMulti,
-    };
-
-    if (isEssential) {
-      setEssentialCriteria([...essentialCriteria, newCriterion]);
-      setShowAddEssential(false);
+  const removeCriterion = (id: number, isCritique: boolean) => {
+    if (isCritique) {
+      setCritiqueCriteria(prev => prev.filter(c => c.id_caracteristique !== id));
     } else {
-      setNonEssentialCriteria([...nonEssentialCriteria, newCriterion]);
-      setShowAddNonEssential(false);
+      setSecondaireCriteria(prev => prev.filter(c => c.id_caracteristique !== id));
     }
   };
 
-  const removeCriterion = (id: string, isEssential: boolean) => {
-    if (isEssential) {
-      setEssentialCriteria(essentialCriteria.filter(c => c.id !== id));
+  const moveCriterion = (id: number, toCritique: boolean) => {
+    if (toCritique) {
+      const criterion = secondaireCriteria.find(c => c.id_caracteristique === id);
+      if (!criterion) return;
+      setSecondaireCriteria(prev => prev.filter(c => c.id_caracteristique !== id));
+      setCritiqueCriteria(prev => [...prev, { ...criterion, poids_caracteristique: 'critique' }]);
     } else {
-      setNonEssentialCriteria(nonEssentialCriteria.filter(c => c.id !== id));
+      const criterion = critiqueCriteria.find(c => c.id_caracteristique === id);
+      if (!criterion) return;
+      setCritiqueCriteria(prev => prev.filter(c => c.id_caracteristique !== id));
+      setSecondaireCriteria(prev => [...prev, { ...criterion, poids_caracteristique: 'secondaire' }]);
     }
   };
 
-  const updateCriterionValue = (id: string, value: string | string[], isEssential: boolean) => {
-    if (isEssential) {
-      setEssentialCriteria(essentialCriteria.map(c =>
-        c.id === id ? { ...c, value } : c
-      ));
-    } else {
-      setNonEssentialCriteria(nonEssentialCriteria.map(c =>
-        c.id === id ? { ...c, value } : c
-      ));
-    }
+  const toggleTextualValue = (id: number, valueId: number, isCritique: boolean) => {
+    const updateFn = (prev: CriterionFormState[]) =>
+      prev.map(c => {
+        if (c.id_caracteristique !== id) return c;
+        const isSelected = c.valeurs_cibles_ids.includes(valueId);
+        if (isSelected) {
+          if (c.valeurs_cibles_ids.length <= 1) return c;
+          return { ...c, valeurs_cibles_ids: c.valeurs_cibles_ids.filter(v => v !== valueId) };
+        }
+        return { ...c, valeurs_cibles_ids: [...c.valeurs_cibles_ids, valueId] };
+      });
+
+    if (isCritique) setCritiqueCriteria(updateFn);
+    else setSecondaireCriteria(updateFn);
   };
 
-  const toggleMultiValue = (id: string, option: string, isEssential: boolean) => {
-    const list = isEssential ? essentialCriteria : nonEssentialCriteria;
-    const criterion = list.find(c => c.id === id);
-    if (!criterion || !Array.isArray(criterion.value)) return;
+  const updateNumericValue = (
+    id: number,
+    field: 'exact' | 'min' | 'max',
+    value: string,
+    isCritique: boolean
+  ) => {
+    const parsed = value === '' ? undefined : Number(value);
+    const updateFn = (prev: CriterionFormState[]) =>
+      prev.map(c => {
+        if (c.id_caracteristique !== id) return c;
+        if (field === 'exact') {
+          return { ...c, valeur_numerique_exact: parsed, valeur_numerique_min: undefined, valeur_numerique_max: undefined };
+        } else if (field === 'min') {
+          return { ...c, valeur_numerique_min: parsed, valeur_numerique_exact: undefined };
+        }
+        return { ...c, valeur_numerique_max: parsed, valeur_numerique_exact: undefined };
+      });
 
-    const currentValues = criterion.value as string[];
-    const newValues = currentValues.includes(option)
-      ? currentValues.filter(v => v !== option)
-      : [...currentValues, option];
-
-    // Don't allow empty selection
-    if (newValues.length === 0) return;
-
-    updateCriterionValue(id, newValues, isEssential);
-  };
-
-  const getOptionsForCriterion = (id: string) => {
-    return AVAILABLE_CRITERIA.find(c => c.id === id)?.options || [];
+    if (isCritique) setCritiqueCriteria(updateFn);
+    else setSecondaireCriteria(updateFn);
   };
 
   const handleApply = () => {
-    // Track criteria modification
-    const modifiedFields = [...essentialCriteria, ...nonEssentialCriteria].map(c => c.id);
-    const criteriaCount = essentialCriteria.length + nonEssentialCriteria.length;
-    trackCriteriaModified(criteriaCount, modifiedFields);
-    onBack();
+    // Reconvertir en ConsolidatedCharacteristic[] (même format de sortie)
+    const allCriteria = [
+      ...critiqueCriteria.map(formStateToCharacteristic),
+      ...secondaireCriteria.map(formStateToCharacteristic),
+    ];
+
+    // Track analytics
+    const modifiedFields = [...critiqueCriteria, ...secondaireCriteria].map(c => String(c.id_caracteristique));
+    trackCriteriaModified(critiqueCriteria.length + secondaireCriteria.length, modifiedFields);
+
+    onApply(allCriteria);
   };
+
+  // =========================================================================
+  // RENDU D'UN CRITÈRE
+  // =========================================================================
 
   const CriterionCard = ({
     criterion,
-    isEssential,
+    isCritique,
     canRemove = true
   }: {
-    criterion: Criterion;
-    isEssential: boolean;
+    criterion: CriterionFormState;
+    isCritique: boolean;
     canRemove?: boolean;
   }) => {
-    const isMulti = criterion.isMulti || Array.isArray(criterion.value);
-    const options = getOptionsForCriterion(criterion.id);
-
     return (
       <div className="flex items-start gap-3 rounded-xl border border-border bg-card p-3 transition-all hover:border-primary/30 hover:shadow-sm">
         <div className="flex-shrink-0 text-muted-foreground/40 mt-1">
@@ -141,18 +256,25 @@ const ModifyCriteriaForm = ({ onBack }: ModifyCriteriaFormProps) => {
         </div>
 
         <div className="flex-1 min-w-0">
-          <div className="text-xs font-medium text-muted-foreground mb-1.5">
-            {criterion.label}
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="text-xs font-medium text-muted-foreground">
+              {criterion.label}
+            </span>
+            {criterion.unite && (
+              <span className="text-[10px] bg-muted/60 text-muted-foreground px-1.5 py-0.5 rounded">
+                {criterion.unite}
+              </span>
+            )}
           </div>
 
-          {isMulti ? (
+          {criterion.type === 'textuelle' ? (
             <div className="flex flex-wrap gap-1.5">
-              {options.map((option) => {
-                const isSelected = Array.isArray(criterion.value) && criterion.value.includes(option);
+              {criterion.options_disponibles.map((option) => {
+                const isSelected = criterion.valeurs_cibles_ids.includes(option.id);
                 return (
                   <button
-                    key={option}
-                    onClick={() => toggleMultiValue(criterion.id, option, isEssential)}
+                    key={option.id}
+                    onClick={() => toggleTextualValue(criterion.id_caracteristique, option.id, isCritique)}
                     className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition-all ${
                       isSelected
                         ? "bg-primary text-primary-foreground"
@@ -160,95 +282,81 @@ const ModifyCriteriaForm = ({ onBack }: ModifyCriteriaFormProps) => {
                     }`}
                   >
                     {isSelected && <Check className="h-3 w-3" />}
-                    {option}
+                    {option.label}
                   </button>
                 );
               })}
             </div>
           ) : (
-            <select
-              value={criterion.value as string}
-              onChange={(e) => updateCriterionValue(criterion.id, e.target.value, isEssential)}
-              className="w-full rounded-lg border-0 bg-muted/50 px-3 py-1.5 text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-            >
-              {options.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
+            <div className="flex items-center gap-2">
+              {criterion.valeur_numerique_exact !== undefined ? (
+                <>
+                  <span className="text-xs text-muted-foreground">Valeur :</span>
+                  <input
+                    type="number"
+                    value={criterion.valeur_numerique_exact ?? ''}
+                    onChange={(e) => updateNumericValue(criterion.id_caracteristique, 'exact', e.target.value, isCritique)}
+                    className="w-24 rounded-lg border-0 bg-muted/50 px-3 py-1.5 text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                  {criterion.unite && <span className="text-xs text-muted-foreground">{criterion.unite}</span>}
+                </>
+              ) : (
+                <>
+                  <span className="text-xs text-muted-foreground">De</span>
+                  <input
+                    type="number"
+                    value={criterion.valeur_numerique_min ?? ''}
+                    onChange={(e) => updateNumericValue(criterion.id_caracteristique, 'min', e.target.value, isCritique)}
+                    placeholder="min"
+                    className="w-20 rounded-lg border-0 bg-muted/50 px-3 py-1.5 text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                  <span className="text-xs text-muted-foreground">à</span>
+                  <input
+                    type="number"
+                    value={criterion.valeur_numerique_max ?? ''}
+                    onChange={(e) => updateNumericValue(criterion.id_caracteristique, 'max', e.target.value, isCritique)}
+                    placeholder="max"
+                    className="w-20 rounded-lg border-0 bg-muted/50 px-3 py-1.5 text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                  {criterion.unite && <span className="text-xs text-muted-foreground">{criterion.unite}</span>}
+                </>
+              )}
+            </div>
           )}
         </div>
 
-        {canRemove && (
+        <div className="flex flex-col gap-1 flex-shrink-0">
           <button
-            onClick={() => removeCriterion(criterion.id, isEssential)}
-            className="flex-shrink-0 rounded-full p-1.5 text-muted-foreground/60 hover:bg-destructive/10 hover:text-destructive transition-colors"
-            title="Supprimer ce critère"
+            onClick={() => moveCriterion(criterion.id_caracteristique, !isCritique)}
+            className="rounded-full p-1.5 text-muted-foreground/60 hover:bg-primary/10 hover:text-primary transition-colors"
+            title={isCritique ? "Passer en secondaire" : "Passer en critique"}
           >
-            <X className="h-4 w-4" />
+            {isCritique ? <Gift className="h-3.5 w-3.5" /> : <Target className="h-3.5 w-3.5" />}
           </button>
-        )}
-      </div>
-    );
-  };
-
-  const AddCriterionDropdown = ({
-    isEssential,
-    onClose
-  }: {
-    isEssential: boolean;
-    onClose: () => void;
-  }) => {
-    const available = getAvailableCriteria(
-      isEssential ? essentialCriteria : nonEssentialCriteria,
-      isEssential ? nonEssentialCriteria : essentialCriteria
-    );
-
-    if (available.length === 0) {
-      return (
-        <div className="rounded-xl border border-border bg-card p-4 text-center text-sm text-muted-foreground">
-          Tous les critères ont été ajoutés
-          <button
-            onClick={onClose}
-            className="ml-2 text-primary hover:underline"
-          >
-            Fermer
-          </button>
-        </div>
-      );
-    }
-
-    return (
-      <div className="rounded-xl border border-border bg-card p-2 shadow-lg">
-        <div className="text-xs font-medium text-muted-foreground px-2 py-1 mb-1">
-          Ajouter un critère
-        </div>
-        {available.map((criterionDef) => (
-          <button
-            key={criterionDef.id}
-            onClick={() => addCriterion(criterionDef, isEssential)}
-            className="w-full text-left rounded-lg px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
-          >
-            {criterionDef.label}
-          </button>
-        ))}
-        <div className="border-t border-border mt-1 pt-1">
-          <button
-            onClick={onClose}
-            className="w-full text-left rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-muted transition-colors"
-          >
-            Annuler
-          </button>
+          {canRemove && (
+            <button
+              onClick={() => removeCriterion(criterion.id_caracteristique, isCritique)}
+              className="rounded-full p-1.5 text-muted-foreground/60 hover:bg-destructive/10 hover:text-destructive transition-colors"
+              title="Supprimer ce critère"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
       </div>
     );
   };
+
+  // =========================================================================
+  // RENDU PRINCIPAL
+  // =========================================================================
+
+  const hasCriteria = critiqueCriteria.length > 0 || secondaireCriteria.length > 0;
 
   return (
     <div className="h-full flex flex-col p-4 lg:p-6">
       <div className="mx-auto max-w-2xl w-full flex flex-col h-full">
-        {/* Header with back button */}
+        {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <button
             onClick={onBack}
@@ -270,91 +378,71 @@ const ModifyCriteriaForm = ({ onBack }: ModifyCriteriaFormProps) => {
           </p>
         </div>
 
-        {/* Scrollable content area */}
+        {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto space-y-4 min-h-0 pb-4">
-          {/* Essential Criteria Section */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <div className="flex items-center justify-center h-6 w-6 rounded-lg bg-primary/10">
-                <Target className="h-3.5 w-3.5 text-primary" />
-              </div>
-              <h3 className="text-sm font-semibold text-foreground">
-                Ce qui compte vraiment
-              </h3>
-              <span className="text-xs text-muted-foreground">
-                — priorité haute
-              </span>
+          {!hasCriteria ? (
+            <div className="text-center py-8 text-muted-foreground text-sm">
+              Aucun critère disponible. Complétez le questionnaire pour obtenir des critères personnalisés.
             </div>
-
-            <div className="space-y-2">
-              {essentialCriteria.map((criterion) => (
-                <CriterionCard
-                  key={criterion.id}
-                  criterion={criterion}
-                  isEssential={true}
-                  canRemove={essentialCriteria.length > 1}
-                />
-              ))}
-
-              {showAddEssential ? (
-                <AddCriterionDropdown
-                  isEssential={true}
-                  onClose={() => setShowAddEssential(false)}
-                />
-              ) : (
-                <button
-                  onClick={() => setShowAddEssential(true)}
-                  className="w-full flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border py-2.5 text-sm font-medium text-muted-foreground hover:border-primary/50 hover:text-primary transition-colors"
-                >
-                  <Plus className="h-4 w-4" />
-                  Ajouter un critère essentiel
-                </button>
+          ) : (
+            <>
+              {/* Section critique */}
+              {critiqueCriteria.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center justify-center h-6 w-6 rounded-lg bg-primary/10">
+                      <Target className="h-3.5 w-3.5 text-primary" />
+                    </div>
+                    <h3 className="text-sm font-semibold text-foreground">
+                      Ce qui compte vraiment
+                    </h3>
+                    <span className="text-xs text-muted-foreground">
+                      — priorité haute
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    {critiqueCriteria.map((criterion) => (
+                      <CriterionCard
+                        key={criterion.id_caracteristique}
+                        criterion={criterion}
+                        isCritique={true}
+                        canRemove={critiqueCriteria.length > 1 || secondaireCriteria.length > 0}
+                      />
+                    ))}
+                  </div>
+                </div>
               )}
-            </div>
-          </div>
 
-          {/* Non-Essential Criteria Section */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <div className="flex items-center justify-center h-6 w-6 rounded-lg bg-amber-500/10">
-                <Gift className="h-3.5 w-3.5 text-amber-600" />
-              </div>
-              <h3 className="text-sm font-semibold text-foreground">
-                Les petits plus
-              </h3>
-              <span className="text-xs text-muted-foreground">
-                — appréciés mais pas indispensables
-              </span>
-            </div>
-
-            <div className="space-y-2">
-              {nonEssentialCriteria.map((criterion) => (
-                <CriterionCard
-                  key={criterion.id}
-                  criterion={criterion}
-                  isEssential={false}
-                />
-              ))}
-
-              {showAddNonEssential ? (
-                <AddCriterionDropdown
-                  isEssential={false}
-                  onClose={() => setShowAddNonEssential(false)}
-                />
-              ) : (
-                <button
-                  onClick={() => setShowAddNonEssential(true)}
-                  className="w-full flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border py-2.5 text-sm font-medium text-muted-foreground hover:border-primary/50 hover:text-primary transition-colors"
-                >
-                  <Plus className="h-4 w-4" />
-                  Ajouter un critère secondaire
-                </button>
+              {/* Section secondaire */}
+              {secondaireCriteria.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center justify-center h-6 w-6 rounded-lg bg-amber-500/10">
+                      <Gift className="h-3.5 w-3.5 text-amber-600" />
+                    </div>
+                    <h3 className="text-sm font-semibold text-foreground">
+                      Les petits plus
+                    </h3>
+                    <span className="text-xs text-muted-foreground">
+                      — appréciés mais pas indispensables
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    {secondaireCriteria.map((criterion) => (
+                      <CriterionCard
+                        key={criterion.id_caracteristique}
+                        criterion={criterion}
+                        isCritique={false}
+                      />
+                    ))}
+                  </div>
+                </div>
               )}
-            </div>
-          </div>
+            </>
+          )}
         </div>
 
-        {/* Fixed Actions at bottom */}
+        {/* Fixed Actions */}
         <div className="flex-shrink-0 pt-4 border-t border-border bg-background">
           <div className="flex flex-col sm:flex-row items-center gap-3 w-full">
             <button
@@ -365,7 +453,8 @@ const ModifyCriteriaForm = ({ onBack }: ModifyCriteriaFormProps) => {
             </button>
             <button
               onClick={handleApply}
-              className="order-1 sm:order-2 w-full sm:w-auto flex-1 sm:flex-none rounded-lg bg-accent px-8 py-2.5 text-base font-semibold text-accent-foreground hover:bg-accent/90 shadow-lg shadow-accent/25 transition-all flex items-center justify-center gap-2"
+              disabled={!hasCriteria}
+              className="order-1 sm:order-2 w-full sm:w-auto flex-1 sm:flex-none rounded-lg bg-accent px-8 py-2.5 text-base font-semibold text-accent-foreground hover:bg-accent/90 shadow-lg shadow-accent/25 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Sparkles className="h-5 w-5" />
               Affiner mes recommandations

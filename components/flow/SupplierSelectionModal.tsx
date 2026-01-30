@@ -476,7 +476,7 @@ const SupplierSelectionModal = ({userAnswers, onBackToQuestionnaire }: SupplierS
   const [mobileViewMode, setMobileViewMode] = useState<"grid" | "list">("list");
 
   // Zustand store pour la sélection des fournisseurs et le flowType
-  const { selectedSupplierIds, setSelectedSupplierIds, setFlowType: setStoreFlowType } = useFlowStore();
+  const { selectedSupplierIds, setSelectedSupplierIds, setFlowType: setStoreFlowType, setEquivalenceCaracteristique } = useFlowStore();
 
   // Convertir le tableau en Set pour les opérations
   const selectedIds = useMemo(() => new Set(selectedSupplierIds), [selectedSupplierIds]);
@@ -779,12 +779,22 @@ const SupplierSelectionModal = ({userAnswers, onBackToQuestionnaire }: SupplierS
           )}
 
           {viewState === "modify-criteria" && (
-            <ModifyCriteriaForm onBack={() => {
-              setViewState("selection");
-              if (selectedIds.size > 0) {
-                setShowCriteriaChangedBanner(true);
-              }
-            }} />
+            <ModifyCriteriaForm
+              onBack={() => {
+                setViewState("selection");
+              }}
+              onApply={(updatedEquivalences) => {
+                // Mettre à jour le store avec les nouvelles équivalences
+                setEquivalenceCaracteristique(updatedEquivalences);
+                setViewState("selection");
+                if (selectedIds.size > 0) {
+                  setShowCriteriaChangedBanner(true);
+                }
+                // TODO: Relancer le matching API avec les nouvelles équivalences
+                // fetch('/api/matching', { ... updatedEquivalences })
+                // puis setMatchingResults(...)
+              }}
+            />
           )}
 
           {viewState === "custom-need" && (
