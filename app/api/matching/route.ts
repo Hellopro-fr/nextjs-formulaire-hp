@@ -7,8 +7,6 @@ const URL_API_MATCHING = `${BASE_URL}/graphdebug-service/produits/matching`;
 
 export async function POST(request: NextRequest) {
   try {
-    console.log("tongasoa ato am api question");
-
     const body = await request.formData();
     const id_categorie = body.get('id_categorie');
     const top_k = body.get('top_k');

@@ -59,7 +59,7 @@ async function prefetchCharacteristics(
 
 // Format brut de l'API
 interface ApiQuestion {
-  id: number;
+  id_question: number;
   intitule: string;
   choix: string;              // "1" = multi, "2" = single
   justification: string | null;
@@ -69,7 +69,7 @@ interface ApiQuestion {
 }
 
 interface ApiAnswer {
-  id: string | number;
+  id_reponse: string | number;
   reponse: string;
   equivalence?: any[];    // Format à définir plus tard
 }
@@ -100,14 +100,14 @@ interface NormalizedAnswer {
  */
 function normalizeQuestion(apiQuestion: ApiQuestion, questionIndex: number): NormalizedQuestion {
   return {
-    id: apiQuestion.id,
+    id: apiQuestion.id_question,
     code: `Q${questionIndex + 1}`,
     title: apiQuestion.intitule,
     type: apiQuestion.choix === '1' ? 'multi' : 'single',  // "1" = multi, "2" = single
     justification: apiQuestion.justification,
     answers: apiQuestion.reponses.map((r) => ({      
-      id: String(r.id),
-      code: String(r.id),
+      id: String(r.id_reponse),
+      code: String(r.id_reponse),
       mainText: r.reponse,
       equivalence: r.equivalence,
     })),

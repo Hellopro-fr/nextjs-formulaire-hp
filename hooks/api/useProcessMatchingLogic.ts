@@ -16,10 +16,18 @@ function normalizeSupplier(SupplierData: any) {
   return {};
 }
 
+const type_typologie = {
+  "pro_france": "1",
+  "pro_foreign": "2",
+  "particulier": "3",
+  "creation": "4",
+};
+
 export function useProcessMatchingLogic() {
   const [showLoader, setShowLoader] = useState(false);
   const {
     categoryId,
+    profileData,
     dynamicEquivalences, 
     setEquivalenceCaracteristique, 
     setMatchingResults
@@ -47,9 +55,12 @@ export function useProcessMatchingLogic() {
 
     try {
 
+      const typologie = profileData?.type;
+      const typologieValue = type_typologie[typologie as keyof typeof type_typologie] || "1";
+
       const metadonnee_utilisateurs = {
-          "pays": "France",
-          "typologie": "1"
+          "pays":  profileData?.country || '',
+          "typologie": typologieValue
       } ;
 
       const formData = new FormData();

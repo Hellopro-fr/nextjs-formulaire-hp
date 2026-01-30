@@ -8,7 +8,6 @@ const TOKEN            = process.env.NEXT_TOKEN_API_QUESTION || '';
 
 export async function POST(request: NextRequest) {
   try {
-    console.log("tongasoa ato am api question");
 
     const body = await request.formData();
     const rubriqueId = body.get('rubriqueId');
