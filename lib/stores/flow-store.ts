@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { useEffect, useState } from 'react';
 import type { ContactFormData, ProfileData, UserAnswers } from '@/types';
+import type { CharacteristicsMap } from '@/types/characteristics';
 
 // Types de parcours pour le tracking GTM
 export type FlowType = 'principal' | 'pas_assez_produits' | 'pas_trouve_recherchez' | null;
@@ -43,7 +44,11 @@ export interface FlowState {
     others: any[];
   } | null;
 
+  // Map des caractéristiques (lookup table pour ID -> label/valeurs)
+  characteristicsMap: CharacteristicsMap;
+
   setMatchingResults: (results: { recommended: any[], others: any[] }) => void;
+  setCharacteristicsMap: (characteristics: CharacteristicsMap) => void;
 
   setFilesStore: (files: File[]) => void;
   addFilesStore: (newFiles: File[]) => void;
@@ -90,6 +95,7 @@ const initialState = {
   entryUrl: "",
   equivalenceCaracteristique: [],
   matchingResults: null,
+  characteristicsMap: {},
 };
 
 export const useFlowStore = create<FlowState>()(
@@ -181,6 +187,8 @@ export const useFlowStore = create<FlowState>()(
       setMatchingResults: (results) => set({ matchingResults: results }),
 
       setFlowType: (flowType) => set({ flowType }),
+
+      setCharacteristicsMap: (characteristics) => set({ characteristicsMap: characteristics }),
 
     }),
     {

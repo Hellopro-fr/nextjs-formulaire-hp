@@ -8,6 +8,11 @@ import type {
   ConsolidatedCharacteristic,
   PoidsCaracteristique,
 } from "@/lib/utils/equivalence-merger";
+import {
+  getCharacteristicLabel,
+  getCharacteristicOptions,
+} from "@/lib/utils/characteristics-helpers";
+import type { CharacteristicsMap } from "@/types/characteristics";
 
 interface ModifyCriteriaFormProps {
   onBack: () => void;
@@ -18,58 +23,169 @@ interface ModifyCriteriaFormProps {
 // TYPES INTERNES POUR L'ÉTAT DU FORMULAIRE
 // =============================================================================
 
-/** Représentation d'un critère dans le formulaire */
 interface CriterionFormState {
   id_caracteristique: number;
-  /** Label affiché (sera fourni par l'API caractéristiques à terme) */
   label: string;
   type: 'textuelle' | 'numerique';
-  /** Poids de la question d'origine (conservé, envoyé à l'API) */
   poids_question: number;
   poids_caracteristique: PoidsCaracteristique;
   unite?: string;
 
-  // --- Valeurs éditables ---
+  // Valeurs éditables
   valeurs_cibles_ids: number[];
   valeurs_bloquantes_ids: number[];
   valeur_numerique_exact?: number;
   valeur_numerique_min?: number;
   valeur_numerique_max?: number;
 
-  // --- Options disponibles (à remplir via API caractéristiques) ---
+  // Options disponibles (à remplir via API caractéristiques)
   options_disponibles: { id: number; label: string }[];
+  isMulti: boolean;
 }
+
+// =============================================================================
+// TODO: SUPPRIMER CETTE SECTION UNE FOIS LE DYNAMIQUE IMPLÉMENTÉ
+// Données statiques en attendant l'API caractéristiques
+// =============================================================================
+
+const STATIC_CRITIQUE_CRITERIA: CriterionFormState[] = [
+  {
+    id_caracteristique: 1,
+    label: "Type de pont",
+    type: 'textuelle',
+    poids_question: 5,
+    poids_caracteristique: 'critique',
+    valeurs_cibles_ids: [1],
+    valeurs_bloquantes_ids: [],
+    options_disponibles: [
+      { id: 1, label: "2 colonnes" },
+      { id: 2, label: "4 colonnes" },
+      { id: 3, label: "Ciseaux" },
+      { id: 4, label: "Fosse" },
+    ],
+    isMulti: false,
+  },
+  {
+    id_caracteristique: 2,
+    label: "Capacité",
+    type: 'textuelle',
+    poids_question: 4,
+    poids_caracteristique: 'critique',
+    valeurs_cibles_ids: [4],
+    valeurs_bloquantes_ids: [],
+    options_disponibles: [
+      { id: 1, label: "2,5 tonnes" },
+      { id: 2, label: "3 tonnes" },
+      { id: 3, label: "3,5 tonnes" },
+      { id: 4, label: "4 tonnes" },
+      { id: 5, label: "5 tonnes" },
+      { id: 6, label: "6 tonnes" },
+    ],
+    isMulti: false,
+  },
+  {
+    id_caracteristique: 3,
+    label: "Alimentation",
+    type: 'textuelle',
+    poids_question: 3,
+    poids_caracteristique: 'critique',
+    valeurs_cibles_ids: [2],
+    valeurs_bloquantes_ids: [],
+    options_disponibles: [
+      { id: 1, label: "230V monophasé" },
+      { id: 2, label: "400V triphasé" },
+    ],
+    isMulti: true,
+  },
+];
+
+const STATIC_SECONDAIRE_CRITERIA: CriterionFormState[] = [
+  {
+    id_caracteristique: 4,
+    label: "Hauteur de levage maximale",
+    type: 'numerique',
+    poids_question: 2,
+    poids_caracteristique: 'secondaire',
+    valeurs_cibles_ids: [],
+    valeurs_bloquantes_ids: [],
+    options_disponibles: [],
+    isMulti: false,
+    unite: 'mm',
+    valeur_numerique_min: 1800,
+    valeur_numerique_max: 2200,
+  },
+  {
+    id_caracteristique: 5,
+    label: "Zone géographique",
+    type: 'textuelle',
+    poids_question: 1,
+    poids_caracteristique: 'secondaire',
+    valeurs_cibles_ids: [1],
+    valeurs_bloquantes_ids: [],
+    options_disponibles: [
+      { id: 1, label: "Île-de-France" },
+      { id: 2, label: "Paris (75)" },
+      { id: 3, label: "Nord" },
+      { id: 4, label: "Est" },
+      { id: 5, label: "Ouest" },
+      { id: 6, label: "Sud" },
+      { id: 7, label: "France entière" },
+    ],
+    isMulti: false,
+  },
+];
 
 // =============================================================================
 // HELPERS : ConsolidatedCharacteristic <-> CriterionFormState
 // =============================================================================
 
-function characteristicToFormState(c: ConsolidatedCharacteristic): CriterionFormState {
+function characteristicToFormState(
+  c: ConsolidatedCharacteristic,
+  characteristicsMap: CharacteristicsMap
+): CriterionFormState {
+  // Récupérer le label et les options depuis characteristicsMap
+  const label = getCharacteristicLabel(characteristicsMap, c.id_caracteristique);
+  const options = getCharacteristicOptions(characteristicsMap, c.id_caracteristique);
+  const charDef = characteristicsMap[c.id_caracteristique];
+
+  // Déterminer le type : prioriser characteristicsMap (source fiable), sinon fallback sur l'équivalence
+  // L'API retourne 'Textuelle'/'Numérique' (majuscule), on normalise en minuscule
+  const resolvedType: 'textuelle' | 'numerique' = charDef
+    ? (charDef.type.toLowerCase() as 'textuelle' | 'numerique')
+    : c.type_caracteristique;
+
   const state: CriterionFormState = {
     id_caracteristique: c.id_caracteristique,
-    label: `Caractéristique #${c.id_caracteristique}`,
-    type: c.type_caracteristique,
+    label,
+    type: resolvedType,
     poids_question: c.poids_question,
     poids_caracteristique: c.poids_caracteristique,
-    unite: c.unite,
+    unite: c.unite || charDef?.unite || undefined,
     valeurs_cibles_ids: [],
     valeurs_bloquantes_ids: [],
-    options_disponibles: [],
+    options_disponibles: options.length > 0 ? options : [],
+    isMulti: false,
   };
 
-  if (c.type_caracteristique === 'textuelle') {
+  if (resolvedType === 'textuelle') {
     state.valeurs_cibles_ids = Array.isArray(c.valeurs_cibles)
       ? [...(c.valeurs_cibles as number[])]
       : [];
     state.valeurs_bloquantes_ids = [...c.valeurs_bloquantes];
-    // TODO: Remplir options_disponibles via appel API caractéristiques
-    // Pour l'instant, on crée des options à partir des valeurs connues
-    const allKnownIds = [...new Set([...state.valeurs_cibles_ids, ...state.valeurs_bloquantes_ids])];
-    state.options_disponibles = allKnownIds.map(id => ({
-      id,
-      label: `Valeur ${id}`,
-    }));
+
+    // Si pas d'options depuis l'API, fallback sur les IDs connus
+    if (state.options_disponibles.length === 0) {
+      const allKnownIds = [...new Set([...state.valeurs_cibles_ids, ...state.valeurs_bloquantes_ids])];
+      state.options_disponibles = allKnownIds.map(id => ({
+        id,
+        label: `Valeur ${id}`,
+      }));
+    }
+
+    // Multi-select si plus d'une valeur cible OU si l'API a plus de 2 options
+    state.isMulti = state.valeurs_cibles_ids.length > 1;
   } else {
+    // Numérique : inputs min/max ou exact
     const val = c.valeurs_cibles;
     if (val && !Array.isArray(val)) {
       state.valeur_numerique_exact = val.exact;
@@ -118,7 +234,7 @@ function formStateToCharacteristic(s: CriterionFormState): ConsolidatedCharacter
 // =============================================================================
 
 const ModifyCriteriaForm = ({ onBack, onApply }: ModifyCriteriaFormProps) => {
-  const { equivalenceCaracteristique } = useFlowStore();
+  const { equivalenceCaracteristique, characteristicsMap } = useFlowStore();
 
   const [critiqueCriteria, setCritiqueCriteria] = useState<CriterionFormState[]>([]);
   const [secondaireCriteria, setSecondaireCriteria] = useState<CriterionFormState[]>([]);
@@ -126,19 +242,34 @@ const ModifyCriteriaForm = ({ onBack, onApply }: ModifyCriteriaFormProps) => {
   const hasTrackedView = useRef(false);
   const hasInitialized = useRef(false);
 
-  // Initialiser les critères depuis le store (une seule fois)
+  // Initialiser les critères depuis le store
+  // TODO: Supprimer le fallback statique une fois le dynamique implémenté
   useEffect(() => {
-    if (hasInitialized.current) return;
-    hasInitialized.current = true;
-
     const consolidated = equivalenceCaracteristique as ConsolidatedCharacteristic[];
-    if (!consolidated || consolidated.length === 0) return;
+    const hasCharacteristicsData = Object.keys(characteristicsMap).length > 0;
+
+    // Si pas de données dynamiques, utiliser les données statiques
+    if (!consolidated || consolidated.length === 0) {
+      if (!hasInitialized.current) {
+        hasInitialized.current = true;
+        setCritiqueCriteria([...STATIC_CRITIQUE_CRITERIA]);
+        setSecondaireCriteria([...STATIC_SECONDAIRE_CRITERIA]);
+      }
+      return;
+    }
+
+    // Si on a les données consolidées mais pas encore characteristicsMap, attendre
+    // (sauf si on a déjà initialisé avec des données partielles)
+    if (!hasCharacteristicsData && !hasInitialized.current) {
+      // Initialiser avec les données partielles (labels génériques)
+      hasInitialized.current = true;
+    }
 
     const critiques: CriterionFormState[] = [];
     const secondaires: CriterionFormState[] = [];
 
     for (const c of consolidated) {
-      const formState = characteristicToFormState(c);
+      const formState = characteristicToFormState(c, characteristicsMap);
       if (c.poids_caracteristique === 'critique') {
         critiques.push(formState);
       } else {
@@ -148,7 +279,7 @@ const ModifyCriteriaForm = ({ onBack, onApply }: ModifyCriteriaFormProps) => {
 
     setCritiqueCriteria(critiques);
     setSecondaireCriteria(secondaires);
-  }, [equivalenceCaracteristique]);
+  }, [equivalenceCaracteristique, characteristicsMap]);
 
   // Track modal view on mount
   useEffect(() => {
@@ -170,21 +301,18 @@ const ModifyCriteriaForm = ({ onBack, onApply }: ModifyCriteriaFormProps) => {
     }
   };
 
-  const moveCriterion = (id: number, toCritique: boolean) => {
-    if (toCritique) {
-      const criterion = secondaireCriteria.find(c => c.id_caracteristique === id);
-      if (!criterion) return;
-      setSecondaireCriteria(prev => prev.filter(c => c.id_caracteristique !== id));
-      setCritiqueCriteria(prev => [...prev, { ...criterion, poids_caracteristique: 'critique' }]);
-    } else {
-      const criterion = critiqueCriteria.find(c => c.id_caracteristique === id);
-      if (!criterion) return;
-      setCritiqueCriteria(prev => prev.filter(c => c.id_caracteristique !== id));
-      setSecondaireCriteria(prev => [...prev, { ...criterion, poids_caracteristique: 'secondaire' }]);
-    }
+  const updateSingleValue = (id: number, valueId: number, isCritique: boolean) => {
+    const updateFn = (prev: CriterionFormState[]) =>
+      prev.map(c => {
+        if (c.id_caracteristique !== id) return c;
+        return { ...c, valeurs_cibles_ids: [valueId] };
+      });
+
+    if (isCritique) setCritiqueCriteria(updateFn);
+    else setSecondaireCriteria(updateFn);
   };
 
-  const toggleTextualValue = (id: number, valueId: number, isCritique: boolean) => {
+  const toggleMultiValue = (id: number, valueId: number, isCritique: boolean) => {
     const updateFn = (prev: CriterionFormState[]) =>
       prev.map(c => {
         if (c.id_caracteristique !== id) return c;
@@ -223,13 +351,11 @@ const ModifyCriteriaForm = ({ onBack, onApply }: ModifyCriteriaFormProps) => {
   };
 
   const handleApply = () => {
-    // Reconvertir en ConsolidatedCharacteristic[] (même format de sortie)
     const allCriteria = [
       ...critiqueCriteria.map(formStateToCharacteristic),
       ...secondaireCriteria.map(formStateToCharacteristic),
     ];
 
-    // Track analytics
     const modifiedFields = [...critiqueCriteria, ...secondaireCriteria].map(c => String(c.id_caracteristique));
     trackCriteriaModified(critiqueCriteria.length + secondaireCriteria.length, modifiedFields);
 
@@ -268,26 +394,43 @@ const ModifyCriteriaForm = ({ onBack, onApply }: ModifyCriteriaFormProps) => {
           </div>
 
           {criterion.type === 'textuelle' ? (
-            <div className="flex flex-wrap gap-1.5">
-              {criterion.options_disponibles.map((option) => {
-                const isSelected = criterion.valeurs_cibles_ids.includes(option.id);
-                return (
-                  <button
-                    key={option.id}
-                    onClick={() => toggleTextualValue(criterion.id_caracteristique, option.id, isCritique)}
-                    className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition-all ${
-                      isSelected
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted/50 text-muted-foreground hover:bg-muted"
-                    }`}
-                  >
-                    {isSelected && <Check className="h-3 w-3" />}
+            criterion.isMulti ? (
+              // Multi-select: toggle buttons
+              <div className="flex flex-wrap gap-1.5">
+                {criterion.options_disponibles.map((option) => {
+                  const isSelected = criterion.valeurs_cibles_ids.includes(option.id);
+                  return (
+                    <button
+                      key={option.id}
+                      onClick={() => toggleMultiValue(criterion.id_caracteristique, option.id, isCritique)}
+                      className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition-all ${
+                        isSelected
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                      }`}
+                    >
+                      {isSelected && <Check className="h-3 w-3" />}
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              // Single-select: dropdown
+              <select
+                value={criterion.valeurs_cibles_ids[0] ?? ''}
+                onChange={(e) => updateSingleValue(criterion.id_caracteristique, Number(e.target.value), isCritique)}
+                className="w-full rounded-lg border-0 bg-muted/50 px-3 py-1.5 text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+              >
+                {criterion.options_disponibles.map((option) => (
+                  <option key={option.id} value={option.id}>
                     {option.label}
-                  </button>
-                );
-              })}
-            </div>
+                  </option>
+                ))}
+              </select>
+            )
           ) : (
+            // Numérique: inputs
             <div className="flex items-center gap-2">
               {criterion.valeur_numerique_exact !== undefined ? (
                 <>
@@ -325,24 +468,15 @@ const ModifyCriteriaForm = ({ onBack, onApply }: ModifyCriteriaFormProps) => {
           )}
         </div>
 
-        <div className="flex flex-col gap-1 flex-shrink-0">
+        {canRemove && (
           <button
-            onClick={() => moveCriterion(criterion.id_caracteristique, !isCritique)}
-            className="rounded-full p-1.5 text-muted-foreground/60 hover:bg-primary/10 hover:text-primary transition-colors"
-            title={isCritique ? "Passer en secondaire" : "Passer en critique"}
+            onClick={() => removeCriterion(criterion.id_caracteristique, isCritique)}
+            className="flex-shrink-0 rounded-full p-1.5 text-muted-foreground/60 hover:bg-destructive/10 hover:text-destructive transition-colors"
+            title="Supprimer ce critère"
           >
-            {isCritique ? <Gift className="h-3.5 w-3.5" /> : <Target className="h-3.5 w-3.5" />}
+            <X className="h-4 w-4" />
           </button>
-          {canRemove && (
-            <button
-              onClick={() => removeCriterion(criterion.id_caracteristique, isCritique)}
-              className="rounded-full p-1.5 text-muted-foreground/60 hover:bg-destructive/10 hover:text-destructive transition-colors"
-              title="Supprimer ce critère"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
+        )}
       </div>
     );
   };
@@ -406,7 +540,7 @@ const ModifyCriteriaForm = ({ onBack, onApply }: ModifyCriteriaFormProps) => {
                         key={criterion.id_caracteristique}
                         criterion={criterion}
                         isCritique={true}
-                        canRemove={critiqueCriteria.length > 1 || secondaireCriteria.length > 0}
+                        canRemove={critiqueCriteria.length > 1}
                       />
                     ))}
                   </div>
