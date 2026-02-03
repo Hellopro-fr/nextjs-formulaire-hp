@@ -84,11 +84,11 @@ export function useProcessMatchingLogic() {
 
     try {
 
-      const typologie = profileData?.type;
+      const typologie = data?.type;
       const typologieValue = type_typologie[typologie as keyof typeof type_typologie] || "1";
 
       const metadonnee_utilisateurs = {
-          "pays":  profileData?.country || '',
+          "pays":  data?.country || '',
           "typologie": typologieValue
       } ;
 
