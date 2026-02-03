@@ -110,6 +110,7 @@ export interface Supplier {
 export interface ContactFormData {
   email: string;
   isKnown: boolean;
+  civility: string;
   firstName: string;
   lastName: string;
   company?: string;

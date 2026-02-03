@@ -3,6 +3,8 @@
 import { ArrowLeft, ArrowRight, Paperclip, Send, UserCheck, X, Mic, MicOff, Shield, Clock, CheckCircle } from "lucide-react";
 import { useState, useRef, useEffect, useMemo } from "react";
 import CountryCodeSelect from "./CountryCodeSelect";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { trackCustomNeedPageView, trackCustomNeedContactView } from "@/lib/analytics";
 
 // Mock list of existing buyers in database
@@ -24,6 +26,7 @@ const CustomNeedForm = ({ onBack }: CustomNeedFormProps) => {
   const [isListening, setIsListening] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
+    civility: "",
     firstName: "",
     lastName: "",
     countryCode: "+33",
@@ -61,8 +64,11 @@ const CustomNeedForm = ({ onBack }: CustomNeedFormProps) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const isFormValid = !showAdditionalFields || !!formData.civility;
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isFormValid) return;
     console.log("Form submitted:", { description, fileName, ...formData });
     onBack();
   };
@@ -333,6 +339,27 @@ const CustomNeedForm = ({ onBack }: CustomNeedFormProps) => {
               {/* Additional fields - only shown if email is valid and not existing buyer */}
               {showAdditionalFields && (
                 <>
+                  {/* Civilité */}
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1.5">
+                      Civilité *
+                    </label>
+                    <RadioGroup
+                      value={formData.civility}
+                      onValueChange={(value) => setFormData({ ...formData, civility: value })}
+                      className="flex gap-4"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="mr" id="civility-mr-cnf" />
+                        <Label htmlFor="civility-mr-cnf">Monsieur</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="mme" id="civility-mme-cnf" />
+                        <Label htmlFor="civility-mme-cnf">Madame</Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label
@@ -412,7 +439,8 @@ const CustomNeedForm = ({ onBack }: CustomNeedFormProps) => {
               {/* Submit button */}
               <button
                 type="submit"
-                className="w-full rounded-xl bg-accent py-4 text-lg font-semibold text-accent-foreground hover:bg-accent/90 shadow-lg shadow-accent/25 transition-all flex items-center justify-center gap-2"
+                disabled={!isFormValid}
+                className="w-full rounded-xl bg-accent py-4 text-lg font-semibold text-accent-foreground hover:bg-accent/90 shadow-lg shadow-accent/25 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Send className="h-5 w-5" />
                 Envoyer ma demande
