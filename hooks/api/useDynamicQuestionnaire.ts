@@ -36,12 +36,24 @@ async function prefetchCharacteristics(
     const characteristicsMap: CharacteristicsMap = {};
 
     for (const char of characteristicsArray) {
-      characteristicsMap[Number(char.id)] = {
+      // L'API retourne id_caracteristique, pas id
+      const charId = Number((char as any).id_caracteristique || char.id);
+
+      if (isNaN(charId)) {
+        console.warn('Invalid characteristic ID:', char);
+        continue;
+      }
+
+      characteristicsMap[charId] = {
         ...char,
-        id: Number(char.id),
-        valeurs: char.valeurs.map((v: { id: string | number; valeur: string }) => ({
-          ...v,
-          id: Number(v.id),
+        id: charId,
+        nom: char.nom,
+        unite: char.unite,
+        type: char.type,
+        valeurs: char.valeurs.map((v: any) => ({
+          // L'API retourne id_valeur, pas id
+          id: Number(v.id_valeur || v.id),
+          valeur: v.valeur,
         })),
       };
     }

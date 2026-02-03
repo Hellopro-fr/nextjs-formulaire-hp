@@ -463,7 +463,13 @@ interface SupplierSelectionModalProps {
   ];
 
 const SupplierSelectionModal = ({userAnswers, onBackToQuestionnaire }: SupplierSelectionModalProps) => {
-  const ALL_SUPPLIERS = [...RECOMMENDED_SUPPLIERS, ...OTHER_SUPPLIERS];
+  // Récupérer les résultats de matching depuis le store
+  const { matchingResults } = useFlowStore();
+
+  // Utiliser les résultats du matching si disponibles, sinon fallback sur les données statiques
+  const RECOMMENDED = matchingResults?.recommended ?? RECOMMENDED_SUPPLIERS;
+  const OTHERS = matchingResults?.others ?? OTHER_SUPPLIERS;
+  const ALL_SUPPLIERS = [...RECOMMENDED, ...OTHERS];
 
   const [isExpanded, setIsExpanded] = useState(false);
   const [animatingCount, setAnimatingCount] = useState(false);
@@ -483,10 +489,10 @@ const SupplierSelectionModal = ({userAnswers, onBackToQuestionnaire }: SupplierS
 
   // Initialiser avec les fournisseurs recommandés si vide
   useEffect(() => {
-    if (selectedSupplierIds.length === 0) {
-      setSelectedSupplierIds(RECOMMENDED_SUPPLIERS.map((s) => s.id));
+    if (selectedSupplierIds.length === 0 && RECOMMENDED.length > 0) {
+      setSelectedSupplierIds(RECOMMENDED.map((s) => s.id));
     }
-  }, []);
+  }, [RECOMMENDED]);
 
   // Séparer les produits en fonction de leur sélection
   const selectedSuppliersList = useMemo(() => {
@@ -506,8 +512,8 @@ const SupplierSelectionModal = ({userAnswers, onBackToQuestionnaire }: SupplierS
   }, [selectedIds, searchQuery]);
 
   const initialSelectedIds = useMemo(
-    () => new Set(RECOMMENDED_SUPPLIERS.map((s) => s.id)),
-    []
+    () => new Set(RECOMMENDED.map((s) => s.id)),
+    [RECOMMENDED]
   );
 
   const isModified = useMemo(() => {
@@ -533,7 +539,7 @@ const SupplierSelectionModal = ({userAnswers, onBackToQuestionnaire }: SupplierS
   };
 
   const resetSelection = () => {
-    setSelectedSupplierIds(RECOMMENDED_SUPPLIERS.map((s) => s.id));
+    setSelectedSupplierIds(RECOMMENDED.map((s) => s.id));
     setIsExpanded(false);
   };
 
