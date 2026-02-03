@@ -100,6 +100,8 @@ export interface DemandeInfoPayload {
 
   // Demande IA
   demande_ia?: boolean;
+
+  id_rubrique?: number | string;
 }
 
 /**
