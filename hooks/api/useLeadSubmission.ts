@@ -61,28 +61,29 @@ export function useLeadSubmission(options: UseLeadSubmissionOptions = {}) {
     mutationFn: async (data: LeadSubmission) => {
       // Transformer les données vers le format DemandeInfoPayload
       const payload: DemandeInfoPayload = {
-        form_ab: 'form_ux_matching',
+        form_ab : 'form_ux_matching',
         acheteur: {
-          civilite: '',
-          nom: data.contact.lastName,
-          prenom: data.contact.firstName,
-          mail: data.contact.email,
-          isKnown: data.contact.isKnown ? '1' : '0',
-          telephone: data.contact.phone,
-          indicatif_tel: data.contact.countryCode || '+33',
-          societe: data.contact.company || data.profile.company?.name || data.profile.companyName || '',
+          civilite      : '',
+          nom           : data.contact.lastName,
+          prenom        : data.contact.firstName,
+          mail          : data.contact.email,
+          isKnown       : data.contact.isKnown ? '1'                                                          : '0',
+          telephone     : data.contact.phone,
+          indicatif_tel : data.contact.countryCode || '+33',
+          societe       : data.contact.company || data.profile.company?.name || data.profile.companyName || '',
           id_siret_insee: data.profile.company?.siren,
-          code_postal: data.profile.postalCode || '',
-          ville: data.profile.city || '',
-          pays: data.profile.countryID || 1, // 1 = France par défaut
-          statut: profileTypeToStatut(data.profile.type),
+          code_postal   : data.profile.postalCode || '',
+          ville         : data.profile.city || '',
+          pays          : data.profile.countryID || 1,                                                                // 1 = France par défaut
+          statut        : profileTypeToStatut(data.profile.type),
         },
-        message: data.contact.message || 'Demande de devis via UX Matching',
-        produits: suppliersToProduitsSelection(data.selectedSupplierIds, suppliers),
-        criteres: data.answers,
+        message      : data.contact.message || 'Demande de devis via UX Matching',
+        produits     : suppliersToProduitsSelection(data.selectedSupplierIds, suppliers),
+        criteres     : data.answers,
         souhait_devis: true,
-        demande_ia: true,
+        demande_ia   : true,
         provenance_di: 'ux_matching',
+        id_rubrique  : data.categoryId || '0',
       };
 
       // Envoyer les demandes au PHP

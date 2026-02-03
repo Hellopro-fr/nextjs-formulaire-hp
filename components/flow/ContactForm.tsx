@@ -215,6 +215,7 @@ const ContactForm = ({ selectedSuppliers, onBack }: ContactFormProps) => {
       selectedSupplierIds: selectedSupplierIds,
       submittedAt: new Date().toISOString(),
       userKnownStatus,
+      categoryId: categoryId?.toString(),
     });
   };
 

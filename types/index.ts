@@ -125,6 +125,7 @@ export interface LeadSubmission {
   selectedSupplierIds: string[];
   submittedAt: string;
   userKnownStatus: 'known' | 'unknown';
+  categoryId?: string;
 }
 
 export interface LeadResponse {
