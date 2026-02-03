@@ -32,6 +32,7 @@ export interface AcheteurData {
   mail: string;
   telephone: string;
   indicatif_tel?: string;
+  isKnown?: string;
 
   // Entreprise
   societe: string;

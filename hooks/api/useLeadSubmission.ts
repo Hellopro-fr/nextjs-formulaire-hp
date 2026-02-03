@@ -67,6 +67,7 @@ export function useLeadSubmission(options: UseLeadSubmissionOptions = {}) {
           nom: data.contact.lastName,
           prenom: data.contact.firstName,
           mail: data.contact.email,
+          isKnown: data.contact.isKnown ? '1' : '0',
           telephone: data.contact.phone,
           indicatif_tel: data.contact.countryCode || '+33',
           societe: data.contact.company || data.profile.company?.name || data.profile.companyName || '',
