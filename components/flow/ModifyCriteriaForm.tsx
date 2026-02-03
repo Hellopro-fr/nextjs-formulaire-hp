@@ -270,7 +270,9 @@ const ModifyCriteriaForm = ({ onBack, onApply }: ModifyCriteriaFormProps) => {
 
     for (const c of consolidated) {
       const formState = characteristicToFormState(c, characteristicsMap);
-      if (c.poids_caracteristique === 'critique') {
+      // Normaliser en minuscule pour éviter les problèmes de casse ('Critique' vs 'critique')
+      const poids = c.poids_caracteristique?.toLowerCase();
+      if (poids === 'critique') {
         critiques.push(formState);
       } else {
         secondaires.push(formState);
