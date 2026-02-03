@@ -183,11 +183,10 @@ const CustomNeedForm = ({ onBack }: CustomNeedFormProps) => {
                   <button
                     type="button"
                     onClick={toggleListening}
-                    className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all shadow-sm ${
-                      isListening
-                        ? "bg-red-500 text-white animate-pulse shadow-red-200"
-                        : "bg-primary text-primary-foreground hover:bg-primary/90 shadow-primary/20"
-                    }`}
+                    className={`hidden flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all shadow-sm ${isListening
+                      ? "bg-red-500 text-white animate-pulse shadow-red-200"
+                      : "bg-primary text-primary-foreground hover:bg-primary/90 shadow-primary/20"
+                      }`}
                   >
                     {isListening ? (
                       <>
@@ -208,9 +207,8 @@ const CustomNeedForm = ({ onBack }: CustomNeedFormProps) => {
                     rows={5}
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    className={`w-full rounded-lg border bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all resize-none ${
-                      isListening ? "border-red-400 ring-2 ring-red-100" : "border-input"
-                    }`}
+                    className={`w-full rounded-lg border bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all resize-none ${isListening ? "border-red-400 ring-2 ring-red-100" : "border-input"
+                      }`}
                     placeholder="Ex: Je cherche un pont élévateur pour véhicules utilitaires longs, avec hauteur de levée 2m minimum..."
                   />
                   {isListening && (
@@ -267,11 +265,10 @@ const CustomNeedForm = ({ onBack }: CustomNeedFormProps) => {
                 <button
                   onClick={goToNextStep}
                   disabled={!description.trim()}
-                  className={`order-1 sm:order-2 w-full sm:w-auto flex-1 sm:flex-none rounded-lg px-8 py-3 text-base font-semibold transition-all flex items-center justify-center gap-2 ${
-                    description.trim()
-                      ? "bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg shadow-accent/25"
-                      : "bg-muted text-muted-foreground cursor-not-allowed"
-                  }`}
+                  className={`order-1 sm:order-2 w-full sm:w-auto flex-1 sm:flex-none rounded-lg px-8 py-3 text-base font-semibold transition-all flex items-center justify-center gap-2 ${description.trim()
+                    ? "bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg shadow-accent/25"
+                    : "bg-muted text-muted-foreground cursor-not-allowed"
+                    }`}
                 >
                   Suivant
                   <ArrowRight className="h-5 w-5" />
