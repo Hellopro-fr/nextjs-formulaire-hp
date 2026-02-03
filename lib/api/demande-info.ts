@@ -17,8 +17,7 @@ const getApiBasePath = () => basePath || '';
  * Convertit les données du formulaire Next.js vers le format PHP attendu
  */
 function formatPayloadForPHP(
-  payload: DemandeInfoPayload,
-  produit: ProduitSelection
+  payload: DemandeInfoPayload
 ): DemandeInfoPHPPayload {
   const { acheteur } = payload;
 
@@ -28,56 +27,55 @@ function formatPayloadForPHP(
     form_ab: 'form_fiche_produit',
 
     // Statut acheteur
-    statut: acheteur.statut,
+    statut       : acheteur.statut,
     rep_prof_part: acheteur.statut,
 
     // Identité
-    civilite: acheteur.civilite || '',
-    'nom-acheteur': acheteur.nom,
+    civilite         : acheteur.civilite || '',
+    'nom-acheteur'   : acheteur.nom,
     'prenom-acheteur': acheteur.prenom,
 
     // Contact
-    'mail-acheteur': acheteur.mail,
+    'mail-acheteur'     : acheteur.mail,
     'telephone-acheteur': acheteur.telephone,
-    indicatif_tel: acheteur.indicatif_tel || '+33',
+    indicatif_tel       : acheteur.indicatif_tel || '+33',
 
     // Entreprise
     'societe-acheteur': acheteur.societe,
 
     // Adresse
-    'adresse-acheteur': acheteur.adresse || '',
+    'adresse-acheteur'    : acheteur.adresse || '',
     'code-postal-acheteur': acheteur.code_postal,
-    'ville-acheteur': acheteur.ville,
-    'pays-acheteur': acheteur.pays || 1, // 1 = France
+    'ville-acheteur'      : acheteur.ville,
+    'pays-acheteur'       : acheteur.pays || 1,       // 1 = France
 
     // Fonction/Service
     fonction: acheteur.fonction || '',
-    service: acheteur.service || '',
-    metier: acheteur.fonction || '',
+    service : acheteur.service || '',
+    metier  : acheteur.fonction || '',
 
     // Message
     'message-acheteur': payload.message || 'Demande de devis',
 
-    // Produit/Société
-    soc: produit.id_societe,
-    [`check_id_prod_soc_${produit.id_societe}`]: produit.id_produit,
-
     // Options demande
     souhait_devis_prod_sim: payload.souhait_devis ? '1' : '0',
-    souhaiter_devis: payload.souhait_devis ? 'on' : '',
-    souhaiter_infos: payload.souhait_infos ? 'on' : '',
-    souhaiter_rdv: payload.souhait_rdv ? 'on' : '',
+    souhaiter_devis       : payload.souhait_devis ? 'on': '',
+    souhaiter_infos       : payload.souhait_infos ? 'on': '',
+    souhaiter_rdv         : payload.souhait_rdv ? 'on'  : '',
 
     // Tracking
-    abtest: payload.abtest || '',
-    origine: payload.origine || '52', // 52 = origine par défaut
+    abtest       : payload.abtest || '',
+    origine      : payload.origine || '52',                  // 52 = origine par défaut
     provenance_di: payload.provenance_di || 'ux_matching',
 
     // Anti-robot (sera généré côté serveur)
     ddc_is_i: generateAntiRobotToken(),
 
+    // produits
+    produits: payload.produits || [],
+
     // Demande IA
-    demande_ia: payload.demande_ia ? '1' : '',
+    demande_ia: payload.demande_ia ? '1': '',
   };
 
   // Ajouter SIRET/INSEE si disponible
@@ -117,18 +115,18 @@ function objectToFormData(obj: Record<string, unknown>): FormData {
  * Envoie une demande d'information pour UN produit
  */
 async function envoyerDemandeUnique(
-  payload: DemandeInfoPayload,
-  produit: ProduitSelection
+  payload: DemandeInfoPayload
 ): Promise<DemandeInfoResponse> {
-  const phpPayload = formatPayloadForPHP(payload, produit);
-
+  const phpPayload = JSON.stringify(payload);
+  console.log("PHP PAYLOAD:");
+  console.log(phpPayload);
   try {
     const response = await fetch(`${getApiBasePath()}/api/demande-info`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(phpPayload),
+      body: phpPayload,
     });
 
     if (!response.ok) {
@@ -175,17 +173,9 @@ export async function envoyerDemandes(
   payload: DemandeInfoPayload
 ): Promise<DemandeInfoResponse[]> {
   const resultats: DemandeInfoResponse[] = [];
-
-  // Envoyer une demande pour chaque produit sélectionné
-  for (const produit of payload.produits) {
-    const resultat = await envoyerDemandeUnique(payload, produit);
-    resultats.push(resultat);
-
-    // Petit délai entre les requêtes pour ne pas surcharger le serveur
-    if (payload.produits.length > 1) {
-      await new Promise(resolve => setTimeout(resolve, 200));
-    }
-  }
+  
+  const resultat = await envoyerDemandeUnique(payload);
+  resultats.push(resultat);
 
   return resultats;
 }

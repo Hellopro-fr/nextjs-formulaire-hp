@@ -151,10 +151,6 @@ export interface DemandeInfoPHPPayload {
   // Message
   'message-acheteur': string;
 
-  // Produit/Société
-  soc: string;
-  [key: `check_id_prod_soc_${string}`]: string;
-
   // Options
   souhait_devis_prod_sim?: string;
   souhaiter_devis?: string;
@@ -165,6 +161,8 @@ export interface DemandeInfoPHPPayload {
   abtest?: string;
   origine?: string;
   provenance_di?: string;
+
+  produits?: ProduitSelection[];
 
   // Anti-robot
   ddc_is_i?: string;
