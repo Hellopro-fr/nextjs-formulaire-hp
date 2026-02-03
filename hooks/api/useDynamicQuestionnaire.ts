@@ -265,17 +265,16 @@ export function useDynamicQuestionnaire(rubriqueId: string) {
     if (!currentQuestion) return;
     const questionCode = currentQuestion.code || `Q${currentIndex + 1}`;
 
-    // Log de debug pour voir ce qui arrive
-    console.log("SubmitAnswer - Selected Codes:", answerCodes);
-    console.log("SubmitAnswer - Current Question Answers:", currentQuestion.answers);
+    // Trouver les réponses sélectionnées
+    const matchedAnswers = currentQuestion.answers
+      .filter((a) => answerCodes.includes(a.code));
 
-    const selectedEquivalences = currentQuestion.answers
-      .filter((a) => answerCodes.includes(a.code)) // On compare code à code
-      .flatMap((a) => a.equivalence || []);
-
-    console.log("Extracted Equivalences:", selectedEquivalences);
+    // Extraire les équivalences de manière robuste
+    const selectedEquivalences = matchedAnswers
+      .flatMap((a) => Array.isArray(a.equivalence) ? a.equivalence : []);
 
     setDynamicAnswer(questionCode, answerCodes, selectedEquivalences);
+
     setCurrentIndex((prev) => prev + 1);
   };
 

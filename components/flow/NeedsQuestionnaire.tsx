@@ -190,16 +190,19 @@ const NeedsQuestionnaire = ({ onComplete, rubriqueId }: NeedsQuestionnaireProps)
       const currentAnswers = dynamicAnswers[questionCode] || [];
 
       if (currentQuestion.type === 'multi') {
-        // Pour le multi, on met juste à jour les codes pour l'UI
-        // On passe un tableau vide [] pour les équivalences car elles seront validées au clic sur "Suivant"
+        // Toggle la sélection
         const nextAnswers = currentAnswers.includes(answerCode)
           ? currentAnswers.filter((code) => code !== answerCode)
           : [...currentAnswers, answerCode];
-        
-        setDynamicAnswer(questionCode, nextAnswers, []); 
+
+        // Extraire les équivalences pour TOUTES les réponses actuellement sélectionnées
+        const selectedEquivalences = currentQuestion.answers
+          .filter((a: { code: string }) => nextAnswers.includes(a.code))
+          .flatMap((a: { equivalence?: any[] }) => a.equivalence || []);
+
+        setDynamicAnswer(questionCode, nextAnswers, selectedEquivalences);
       } else {
         // Mode Single : On utilise la fonction submitAnswer du hook
-        // qui contient déjà la logique d'extraction des équivalences
         submitAnswer([answerCode]);
       }
     };
