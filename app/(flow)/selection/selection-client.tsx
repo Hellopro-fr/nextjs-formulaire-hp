@@ -4,6 +4,8 @@ import { useEffect, useRef } from 'react';
 import SupplierSelectionModal from '@/components/flow/SupplierSelectionModal';
 import { useFlowStore } from '@/lib/stores/flow-store';
 import { useFlowNavigation } from '@/hooks/useFlowNavigation';
+import { Supplier } from '@/types';
+import { getAssetPath } from "@/lib/utils";
 import { trackSelectionPageView, setFlowType } from '@/lib/analytics';
 
 export default function SelectionClient() {
@@ -32,6 +34,14 @@ export default function SelectionClient() {
     // Navigate back to questionnaire (with GET params preserved)
     goToQuestionnaire();
   };
+
+  const { matchingResults } = useFlowStore();
+
+  // if (!matchingResults) {
+  //   return <div>Chargement ou redirection...</div>;
+  // }
+
+  //tODO changer RECOMMENDED_SUPPLIERS par result matchingResults
 
   return (
     <SupplierSelectionModal

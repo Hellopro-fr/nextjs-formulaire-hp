@@ -45,6 +45,7 @@ const SomethingToAddForm = ({ onNext, onBack }: SomethingToAddFormProps) => {
   const [isListening, setIsListening] = useState(false);
   const [formData, setFormData] = useState<ContactFormData>({
     email: "",
+    isKnown: false,
     firstName: "",
     lastName: "",
     countryCode: "+33",
@@ -111,6 +112,7 @@ const SomethingToAddForm = ({ onNext, onBack }: SomethingToAddFormProps) => {
         updatedData = {
           ...formData,                   // On garde le message et les autres champs
           email    : formData.email,      // L'email déjà saisi
+          isKnown  : true,
           firstName: info.prenom || "",
           lastName : info.nom || "",
           phone    : info.tel || "",
@@ -121,6 +123,7 @@ const SomethingToAddForm = ({ onNext, onBack }: SomethingToAddFormProps) => {
         updatedData = {
           ...formData, 
           email      : formData.email,
+          isKnown    : false,
           firstName  : "",
           lastName   : "",
           phone      : "",

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { useEffect, useState } from 'react';
 import type { ContactFormData, ProfileData, UserAnswers } from '@/types';
+import type { CharacteristicsMap } from '@/types/characteristics';
 
 // Types de parcours pour le tracking GTM
 export type FlowType = 'principal' | 'pas_assez_produits' | 'pas_trouve_recherchez' | null;
@@ -36,6 +37,19 @@ export interface FlowState {
 
   entryUrl: string | null;
 
+  equivalenceCaracteristique: any[];
+
+  matchingResults: {
+    recommended: any[];
+    others: any[];
+  } | null;
+
+  // Map des caractéristiques (lookup table pour ID -> label/valeurs)
+  characteristicsMap: CharacteristicsMap;
+
+  setMatchingResults: (results: { recommended: any[], others: any[] }) => void;
+  setCharacteristicsMap: (characteristics: CharacteristicsMap) => void;
+
   setFilesStore: (files: File[]) => void;
   addFilesStore: (newFiles: File[]) => void;
 
@@ -52,6 +66,8 @@ export interface FlowState {
     codes: string[], 
     equivalences?: any[]
   ) => void;
+
+  setEquivalenceCaracteristique: (equivalences: any[]) => void;
 
   resetDynamicAnswers: () => void;
   setProfileData: (data: ProfileData) => void;
@@ -76,7 +92,10 @@ const initialState = {
   selectedSupplierIds: [],
   startTime: null,
   files: [],
-  entryUrl: ""
+  entryUrl: "",
+  equivalenceCaracteristique: [],
+  matchingResults: null,
+  characteristicsMap: {},
 };
 
 export const useFlowStore = create<FlowState>()(
@@ -127,6 +146,8 @@ export const useFlowStore = create<FlowState>()(
           },
         })),
 
+      setEquivalenceCaracteristique: (data) => set({ equivalenceCaracteristique: data }),
+
       // resetDynamicAnswers: () => set({ dynamicAnswers: {} }),
 
       // N'oubliez pas de mettre à jour la fonction reset si vous en avez une
@@ -161,9 +182,13 @@ export const useFlowStore = create<FlowState>()(
 
       reset: () => set(initialState),
 
-      setEntryUrl: (url) => set({ entryUrl: url }),
+      setEntryUrl: (url) => set({ entryUrl: url }),     
+
+      setMatchingResults: (results) => set({ matchingResults: results }),
 
       setFlowType: (flowType) => set({ flowType }),
+
+      setCharacteristicsMap: (characteristics) => set({ characteristicsMap: characteristics }),
 
     }),
     {

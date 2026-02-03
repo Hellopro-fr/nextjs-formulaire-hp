@@ -1,11 +1,9 @@
 "use client";
 
-import { useState } from 'react';
 import ProfileTypeStep from '@/components/flow/ProfileTypeStep';
 import MatchingLoader from '@/components/flow/MatchingLoader';
 import { useFlowNavigation } from '@/hooks/useFlowNavigation';
-import type { ProfileData } from '@/types';
-import { useFlowStore } from '@/lib/stores/flow-store';
+import { useProcessMatchingLogic } from '@/hooks/api/useProcessMatchingLogic';
 
 interface Country {
   id: number;
@@ -22,12 +20,7 @@ export default function ProfileClient({
   otherCountries,
 }: ProfileClientProps) {
   const { goToSelection, goToQuestionnaire } = useFlowNavigation();
-  const [showLoader, setShowLoader] = useState(false);
-
-  const handleComplete = (data: ProfileData) => {
-    // Show loader before navigating to selection
-    setShowLoader(true);
-  };
+  const { showLoader, submitProfile } = useProcessMatchingLogic();
 
   const handleLoaderComplete = () => {
     // Navigate to selection step after loader finishes (with GET params preserved)
@@ -45,7 +38,7 @@ export default function ProfileClient({
 
   return (
     <ProfileTypeStep
-      onComplete={handleComplete}
+      onComplete={submitProfile}
       onBack={handleBack}
       priorityCountries={priorityCountries}
       otherCountries={otherCountries}

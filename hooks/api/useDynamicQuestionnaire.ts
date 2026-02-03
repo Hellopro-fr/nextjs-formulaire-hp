@@ -1,14 +1,56 @@
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useFlowStore } from '@/lib/stores/flow-store';
 import { basePath } from '@/lib/utils';
+import type { CharacteristicDefinition, CharacteristicsMap } from '@/types/characteristics';
 
 // Toujours utiliser le proxy Next.js pour éviter les problèmes CORS
 const getApiBasePath = () => {
   return basePath || '';
 };
+
+/**
+ * Prefetch les caractéristiques en background (non-bloquant)
+ * Appelé dès que l'API Qn répond pour avoir les données prêtes
+ */
+async function prefetchCharacteristics(
+  categoryId: number,
+  setCharacteristicsMap: (map: CharacteristicsMap) => void
+): Promise<void> {
+  try {
+    const apiBase = getApiBasePath();
+    const formData = new FormData();
+    formData.append('id_categorie', categoryId.toString());
+
+    const response = await fetch(`${apiBase}/api/caracteristiques`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) return;
+
+    const data = await response.json();
+    const characteristicsArray: CharacteristicDefinition[] = data.response || [];
+    const characteristicsMap: CharacteristicsMap = {};
+
+    for (const char of characteristicsArray) {
+      characteristicsMap[Number(char.id)] = {
+        ...char,
+        id: Number(char.id),
+        valeurs: char.valeurs.map((v: { id: string | number; valeur: string }) => ({
+          ...v,
+          id: Number(v.id),
+        })),
+      };
+    }
+
+    setCharacteristicsMap(characteristicsMap);
+  } catch (error) {
+    console.error('Prefetch characteristics error:', error);
+  }
+}
 
 
 // =============================================================================
@@ -17,7 +59,7 @@ const getApiBasePath = () => {
 
 // Format brut de l'API
 interface ApiQuestion {
-  id: number;
+  id_question: number;
   intitule: string;
   choix: string;              // "1" = multi, "2" = single
   justification: string | null;
@@ -27,7 +69,7 @@ interface ApiQuestion {
 }
 
 interface ApiAnswer {
-  id: string | number;
+  id_reponse: string | number;
   reponse: string;
   equivalence?: any[];    // Format à définir plus tard
 }
@@ -58,14 +100,14 @@ interface NormalizedAnswer {
  */
 function normalizeQuestion(apiQuestion: ApiQuestion, questionIndex: number): NormalizedQuestion {
   return {
-    id: apiQuestion.id,
+    id: apiQuestion.id_question,
     code: `Q${questionIndex + 1}`,
     title: apiQuestion.intitule,
     type: apiQuestion.choix === '1' ? 'multi' : 'single',  // "1" = multi, "2" = single
     justification: apiQuestion.justification,
     answers: apiQuestion.reponses.map((r) => ({      
-      id: String(r.id),
-      code: String(r.id),
+      id: String(r.id_reponse),
+      code: String(r.id_reponse),
       mainText: r.reponse,
       equivalence: r.equivalence,
     })),
@@ -77,7 +119,14 @@ function normalizeQuestion(apiQuestion: ApiQuestion, questionIndex: number): Nor
 // =============================================================================
 
 export function useDynamicQuestionnaire(rubriqueId: string) {
-  const { dynamicAnswers, setDynamicAnswer, resetDynamicAnswers } = useFlowStore();
+  const {
+    dynamicAnswers,
+    setDynamicAnswer,
+    resetDynamicAnswers,
+    categoryId,
+    characteristicsMap,
+    setCharacteristicsMap,
+  } = useFlowStore();
 
   // Restaurer l'index à partir des réponses déjà enregistrées dans le store.
   // Si l'utilisateur revient (ex: retour depuis /profile), on affiche la dernière
@@ -170,6 +219,15 @@ export function useDynamicQuestionnaire(rubriqueId: string) {
     },
     enabled: !!q1AnswerCode && !!rubriqueId,
   });
+
+  // Prefetch des caractéristiques dès que pathData est reçu (en background)
+  const hasCharacteristics = Object.keys(characteristicsMap).length > 0;
+  useEffect(() => {
+    if (pathData && categoryId && !hasCharacteristics) {
+      // Lancer en background sans bloquer
+      prefetchCharacteristics(categoryId, setCharacteristicsMap);
+    }
+  }, [pathData, categoryId, hasCharacteristics, setCharacteristicsMap]);
 
   // Question courante
   const currentQuestion = useMemo(() => {

@@ -1,41 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 const BASE_URL = process.env.HELLOPRO_API_URL || 'https://dev-api.hellopro.fr';
-const URL_API_QUESTION = `${BASE_URL}/v2/index.php`;
-const TOKEN            = process.env.NEXT_TOKEN_API_QUESTION || '';
+const URL_API = `${BASE_URL}/v2/index.php`;
+const TOKEN = process.env.NEXT_TOKEN_API_QUESTION || '';
 
 export async function POST(request: NextRequest) {
   try {
-
     const body = await request.formData();
-    const rubriqueId = body.get('rubriqueId');
+    const categoryId = body.get('id_categorie');
 
-    if (!rubriqueId) {
+    if (!categoryId) {
       return NextResponse.json(
-        { error: 'rubrique_id required' },
+        { error: 'id_categorie required' },
         { status: 400 }
       );
     }
 
-    const url = new URL(URL_API_QUESTION);
-    console.log('Calling Questionnaire Q1 API:', url.toString());    
-    
-    const payloadQ1 = {
-      etape: "question",
-      field: "question1",
+    const payload = {
+      etape: "caracteristique",
+      field: "final",
       action: "get",
-      data: { 
-        id_categorie: rubriqueId 
+      data: {
+        id_categorie: categoryId.toString()
       }
     };
 
-    const response = await fetch(URL_API_QUESTION, {
+    const response = await fetch(URL_API, {
       method: 'POST',
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${TOKEN}`
-        },
-      body: JSON.stringify(payloadQ1),
+      },
+      body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
@@ -47,11 +43,9 @@ export async function POST(request: NextRequest) {
 
     const data = await response.json();
 
-    console.log("API Q1", data);
-
     return NextResponse.json(data, { status: 200 });
   } catch (error) {
-    console.error('Questionnaire Q1 proxy error:', error);
+    console.error('Caracteristiques proxy error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
