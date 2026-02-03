@@ -5,17 +5,57 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useFlowStore } from '@/lib/stores/flow-store';
 import { resetTrackingState } from '@/lib/analytics';
 
+// Clé pour stocker le timestamp de la dernière vérification
+const LAST_CHECK_KEY = 'flow-last-nav-check';
+
+/**
+ * Détecte si c'est un vrai rechargement de page (F5) vs navigation SPA
+ * Utilise le startTime de l'entrée de navigation pour différencier
+ */
+function detectPageReload(): { isReload: boolean; isFirstVisit: boolean } {
+  if (typeof window === 'undefined') {
+    return { isReload: false, isFirstVisit: false };
+  }
+
+  try {
+    const navEntries = performance.getEntriesByType('navigation') as PerformanceNavigationTiming[];
+    if (navEntries.length === 0) {
+      return { isReload: false, isFirstVisit: false };
+    }
+
+    const navEntry = navEntries[0];
+    const navType = navEntry.type;
+    const navStartTime = navEntry.startTime.toString();
+
+    // Récupérer le dernier startTime vérifié
+    const lastCheckedStartTime = sessionStorage.getItem(LAST_CHECK_KEY);
+
+    // Si le startTime est le même, c'est une navigation SPA (pas un nouveau chargement)
+    if (lastCheckedStartTime === navStartTime) {
+      return { isReload: false, isFirstVisit: false };
+    }
+
+    // Nouveau chargement de page - stocker le startTime
+    sessionStorage.setItem(LAST_CHECK_KEY, navStartTime);
+
+    return {
+      isReload: navType === 'reload',
+      isFirstVisit: navType === 'navigate' && !lastCheckedStartTime,
+    };
+  } catch {
+    return { isReload: false, isFirstVisit: false };
+  }
+}
+
 /**
  * Composant qui gère le reset du flow lors d'un rechargement de page (F5).
  *
  * Comportement :
- * - F5 sur /questionnaire : reset et reste sur /questionnaire (avec paramètres GET)
- * - F5 sur /profile, /selection, etc. : reset et redirige vers /questionnaire (avec paramètres GET)
- * - Navigation SPA (router.push) : pas de reset
+ * - F5 ou actualisation : TOUJOURS reset le store
+ * - Première visite (nouveau onglet) : reset et initialisation
+ * - Navigation SPA (router.push de /questionnaire à /profile) : PAS de reset
  *
  * Les paramètres GET (id_categorie, token, etc.) sont conservés lors de la redirection.
- * Cela garantit que l'utilisateur recommence toujours le funnel depuis le début
- * après un rechargement, avec des données de tracking cohérentes.
  */
 export default function FlowStorageReset() {
   const reset = useFlowStore((state) => state.reset);
@@ -25,22 +65,20 @@ export default function FlowStorageReset() {
   const hasChecked = useRef(false);
 
   useEffect(() => {
-    // Ne s'exécuter qu'une seule fois par montage du composant
+    // Ne s'exécuter qu'une seule fois par session de composant
     if (hasChecked.current) return;
     hasChecked.current = true;
 
     if (typeof window === 'undefined') return;
 
-    // Détecter le type de navigation
-    let navigationType: string | undefined;
+    const { isReload, isFirstVisit } = detectPageReload();
 
-    // Méthode moderne: PerformanceNavigationTiming
-    const navEntries = performance.getEntriesByType('navigation') as PerformanceNavigationTiming[];
-    if (navEntries.length > 0) {
-      navigationType = navEntries[0].type;
+    // Si ce n'est ni un reload ni une première visite, c'est une navigation SPA → ne rien faire
+    if (!isReload && !isFirstVisit) {
+      console.log('[FlowStorageReset] SPA navigation detected - no reset');
+      return;
     }
 
-    const hasInitialized = sessionStorage.getItem('flow-initialized') === 'true';
     const isQuestionnairePage = pathname === '/questionnaire' || pathname?.startsWith('/formulaire');
 
     // Construire l'URL de redirection avec les paramètres GET conservés
@@ -49,24 +87,20 @@ export default function FlowStorageReset() {
       return params ? `/questionnaire?${params}` : '/questionnaire';
     };
 
-    if (!hasInitialized) {
-      // Première visite : reset complet
+    // Reset uniquement sur F5 ou première visite
+    if (isReload || isFirstVisit) {
+      // Clear sessionStorage
       sessionStorage.removeItem('flow-storage');
-      reset();
-      resetTrackingState();
-      sessionStorage.setItem('flow-initialized', 'true');
 
-      // Si pas sur questionnaire, rediriger avec les paramètres GET
-      if (!isQuestionnairePage) {
-        router.replace(buildRedirectUrl());
-      }
-    } else if (navigationType === 'reload') {
-      // F5/Reload : reset complet et rediriger vers questionnaire
-      sessionStorage.removeItem('flow-storage');
+      // Reset le store Zustand
       reset();
+
+      // Reset le tracking
       resetTrackingState();
 
-      // Rediriger vers questionnaire si on n'y est pas déjà (avec paramètres GET)
+      console.log('[FlowStorageReset] Store reset -', isReload ? 'Page reload (F5)' : 'First visit');
+
+      // Rediriger vers questionnaire si on n'y est pas déjà
       if (!isQuestionnairePage) {
         router.replace(buildRedirectUrl());
       }

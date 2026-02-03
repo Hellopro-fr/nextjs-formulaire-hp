@@ -102,7 +102,7 @@ const CriteriaTags = ({
           </button>
         )}
       </div>
-      <ScrollBar orientation="horizontal" className="h-1.5" />
+      <ScrollBar orientation="horizontal" className="h-2" />
     </ScrollArea>
   );
 };

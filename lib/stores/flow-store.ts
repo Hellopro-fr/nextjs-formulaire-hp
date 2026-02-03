@@ -1,8 +1,75 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
+import { persist, createJSONStorage, type StateStorage } from 'zustand/middleware';
 import { useEffect, useState } from 'react';
 import type { ContactFormData, ProfileData, UserAnswers } from '@/types';
 import type { CharacteristicsMap } from '@/types/characteristics';
+
+// =============================================================================
+// STORAGE WRAPPER - Gère le reset sur reload (F5)
+// =============================================================================
+
+/**
+ * Détecte si la page a été rechargée (F5) de manière synchrone
+ * Doit être appelé le plus tôt possible avant l'hydratation
+ */
+function isPageReload(): boolean {
+  if (typeof window === 'undefined') return false;
+
+  try {
+    const navEntries = performance.getEntriesByType('navigation') as PerformanceNavigationTiming[];
+    if (navEntries.length > 0) {
+      return navEntries[0].type === 'reload';
+    }
+  } catch {
+    // Fallback si l'API n'est pas disponible
+  }
+  return false;
+}
+
+/**
+ * Storage wrapper qui clear automatiquement lors d'un F5
+ */
+const createReloadAwareStorage = (): StateStorage => {
+  // Vérifier IMMÉDIATEMENT si c'est un reload (avant que Zustand hydrate)
+  const shouldClearOnLoad = typeof window !== 'undefined' && isPageReload();
+
+  if (shouldClearOnLoad) {
+    // Clear le storage synchroniquement AVANT que Zustand ne l'utilise
+    try {
+      sessionStorage.removeItem('flow-storage');
+      console.log('[FlowStore] Storage cleared on page reload');
+    } catch {
+      // Ignore les erreurs sessionStorage
+    }
+  }
+
+  return {
+    getItem: (name: string): string | null => {
+      if (typeof window === 'undefined') return null;
+      try {
+        return sessionStorage.getItem(name);
+      } catch {
+        return null;
+      }
+    },
+    setItem: (name: string, value: string): void => {
+      if (typeof window === 'undefined') return;
+      try {
+        sessionStorage.setItem(name, value);
+      } catch {
+        // Ignore les erreurs de quota
+      }
+    },
+    removeItem: (name: string): void => {
+      if (typeof window === 'undefined') return;
+      try {
+        sessionStorage.removeItem(name);
+      } catch {
+        // Ignore
+      }
+    },
+  };
+};
 
 // Types de parcours pour le tracking GTM
 export type FlowType = 'principal' | 'pas_assez_produits' | 'pas_trouve_recherchez' | null;
@@ -193,7 +260,8 @@ export const useFlowStore = create<FlowState>()(
     }),
     {
       name: 'flow-storage',
-      storage: createJSONStorage(() => sessionStorage),
+      // Utiliser notre storage wrapper qui clear automatiquement lors d'un F5
+      storage: createJSONStorage(createReloadAwareStorage),
       // ✅ AJOUT IMPORTANT : partialize
       // On exclut 'files' de la persistance car un objet File ne se JSON.stringify pas.
       partialize: (state) => {
