@@ -53,7 +53,7 @@ const CriteriaTags = ({
 
   // New mode: compact single line display
   return (
-    <div className="flex items-center gap-2 overflow-x-auto pb-1">
+    <div className="flex items-center gap-2 overflow-x-auto pb-2">
       {/* Essential Criteria */}
       {essentialCriteria && essentialCriteria.length > 0 && (
         <div className="flex items-center gap-1.5 flex-shrink-0">
