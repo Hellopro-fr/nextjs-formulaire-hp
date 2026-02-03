@@ -5,44 +5,79 @@ import type { ContactFormData, ProfileData, UserAnswers } from '@/types';
 import type { CharacteristicsMap } from '@/types/characteristics';
 
 // =============================================================================
-// STORAGE WRAPPER - Gère le reset sur reload (F5)
+// STORAGE WRAPPER - Gère le reset sur reload (F5) et changement manuel d'URL
 // =============================================================================
 
-/**
- * Détecte si la page a été rechargée (F5) de manière synchrone
- * Doit être appelé le plus tôt possible avant l'hydratation
- */
-function isPageReload(): boolean {
-  if (typeof window === 'undefined') return false;
+// Clé de sessionStorage pour le flag de redirection
+const NEEDS_REDIRECT_KEY = 'flow-needs-redirect';
 
+// Exporter la clé pour FlowStorageReset
+export const FLOW_NEEDS_REDIRECT_KEY = NEEDS_REDIRECT_KEY;
+
+// =============================================================================
+// EXÉCUTION IMMÉDIATE - Doit s'exécuter AVANT que Zustand hydrate
+// =============================================================================
+// NOTE: Ce bloc ne s'exécute que lors d'un FULL page load (F5, nav manuelle,
+// premier accès, back/forward). La navigation SPA ne ré-exécute jamais le
+// code module-level car le module est déjà chargé en mémoire.
+// =============================================================================
+if (typeof window !== 'undefined') {
   try {
     const navEntries = performance.getEntriesByType('navigation') as PerformanceNavigationTiming[];
-    if (navEntries.length > 0) {
-      return navEntries[0].type === 'reload';
+    const navType = navEntries.length > 0 ? navEntries[0].type : 'navigate';
+
+    // Flag pour savoir si une session flow était déjà active
+    const SESSION_ACTIVE_KEY = 'flow-session-active';
+    const wasSessionActive = sessionStorage.getItem(SESSION_ACTIVE_KEY) === 'true';
+
+    let shouldClear = false;
+    let needsRedirect = false;
+    let reason = 'unknown';
+
+    if (navType === 'reload') {
+      // F5 / Actualiser
+      shouldClear = true;
+      needsRedirect = true;
+      reason = 'reload';
+    } else if (navType === 'back_forward') {
+      // Bouton retour/avancer du navigateur
+      shouldClear = true;
+      needsRedirect = true;
+      reason = 'back-forward';
+    } else if (navType === 'navigate' && wasSessionActive) {
+      // Changement manuel d'URL (la session existait déjà)
+      shouldClear = true;
+      needsRedirect = true;
+      reason = 'manual-url-change';
+    } else if (navType === 'navigate' && !wasSessionActive) {
+      // Première visite → partir propre, pas de redirect
+      shouldClear = true;
+      needsRedirect = false;
+      reason = 'first-visit';
     }
-  } catch {
-    // Fallback si l'API n'est pas disponible
+
+    if (shouldClear) {
+      sessionStorage.removeItem('flow-storage');
+      console.log('[FlowStore] Storage cleared -', reason);
+    }
+
+    if (needsRedirect) {
+      sessionStorage.setItem(NEEDS_REDIRECT_KEY, 'true');
+      console.log('[FlowStore] Redirect flag set');
+    }
+
+    // Marquer la session comme active
+    sessionStorage.setItem(SESSION_ACTIVE_KEY, 'true');
+
+  } catch (e) {
+    console.error('[FlowStore] Error in navigation detection:', e);
   }
-  return false;
 }
 
 /**
- * Storage wrapper qui clear automatiquement lors d'un F5
+ * Storage wrapper simple pour sessionStorage
  */
-const createReloadAwareStorage = (): StateStorage => {
-  // Vérifier IMMÉDIATEMENT si c'est un reload (avant que Zustand hydrate)
-  const shouldClearOnLoad = typeof window !== 'undefined' && isPageReload();
-
-  if (shouldClearOnLoad) {
-    // Clear le storage synchroniquement AVANT que Zustand ne l'utilise
-    try {
-      sessionStorage.removeItem('flow-storage');
-      console.log('[FlowStore] Storage cleared on page reload');
-    } catch {
-      // Ignore les erreurs sessionStorage
-    }
-  }
-
+const createSessionStorage = (): StateStorage => {
   return {
     getItem: (name: string): string | null => {
       if (typeof window === 'undefined') return null;
@@ -261,7 +296,7 @@ export const useFlowStore = create<FlowState>()(
     {
       name: 'flow-storage',
       // Utiliser notre storage wrapper qui clear automatiquement lors d'un F5
-      storage: createJSONStorage(createReloadAwareStorage),
+      storage: createJSONStorage(createSessionStorage),
       // ✅ AJOUT IMPORTANT : partialize
       // On exclut 'files' de la persistance car un objet File ne se JSON.stringify pas.
       partialize: (state) => {
