@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const BASE_URL = process.env.HELLOPRO_API_URL || 'https://dev-api.hellopro.fr';
 const URL_API = `${BASE_URL}/api/hp/view/index.php`;
+const TOKEN   = process.env.TOKEN_INFO_PRODUIT || '';
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,7 +31,8 @@ export async function POST(request: NextRequest) {
     const response = await fetch(URL_API, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json',        
+        'Authorization': `Bearer ${TOKEN}`
       },
       body: JSON.stringify(payload),
     });
