@@ -47,6 +47,7 @@ const ContactForm = ({ selectedSuppliers, onBack }: ContactFormProps) => {
     lastName: "",
     company: profileData?.company?.name || profileData?.companyName || "",
     countryCode: "+33",
+    id_pays_tel: 1, // France par défaut
     phone: "",
     message: "",
   });
@@ -102,13 +103,14 @@ const ContactForm = ({ selectedSuppliers, onBack }: ContactFormProps) => {
             
     }else{
       updatedData = {
-        ...formData, 
+        ...formData,
         email      : formData.email,
         isKnown    : false,
         firstName  : "",
         lastName   : "",
         phone      : "",
-        countryCode: "",
+        countryCode: formData.countryCode || "+33",
+        id_pays_tel: formData.id_pays_tel || 1,
       };
     }
 
@@ -448,8 +450,10 @@ const ContactForm = ({ selectedSuppliers, onBack }: ContactFormProps) => {
             <PhoneInput
               value={formData.phone}
               countryCode={formData.countryCode || "+33"}
-              onValueChange={(phone) => setFormData({ ...formData, phone })}
-              onCountryCodeChange={(code) => setFormData({ ...formData, countryCode: code })}
+              countryId={formData.id_pays_tel}
+              onValueChange={(phone) => setFormData((prev) => ({ ...prev, phone }))}
+              onCountryCodeChange={(code) => setFormData((prev) => ({ ...prev, countryCode: code }))}
+              onCountryIdChange={(id) => setFormData((prev) => ({ ...prev, id_pays_tel: id }))}
               error={errors.phone}
               required
             />

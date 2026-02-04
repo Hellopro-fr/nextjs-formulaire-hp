@@ -52,8 +52,8 @@ const SomethingToAddForm = ({ onNext, onBack }: SomethingToAddFormProps) => {
     firstName: "",
     lastName: "",
     countryCode: "+33",
+    id_pays_tel: 1, // France par défaut
     phone: "",
-    civility: "",
   });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
@@ -125,13 +125,14 @@ const SomethingToAddForm = ({ onNext, onBack }: SomethingToAddFormProps) => {
               
       }else{
         updatedData = {
-          ...formData, 
+          ...formData,
           email      : formData.email,
           isKnown    : false,
           firstName  : "",
           lastName   : "",
           phone      : "",
-          countryCode: "",
+          countryCode: formData.countryCode || "+33",
+          id_pays_tel: formData.id_pays_tel || 1,
         };
       }
   
@@ -521,9 +522,10 @@ const SomethingToAddForm = ({ onNext, onBack }: SomethingToAddFormProps) => {
                         <PhoneInput
                           value={formData.phone}
                           countryCode={formData.countryCode || "+33"}
-                          onValueChange={(phone) => setFormData({ ...formData, phone })}
-                          onCountryCodeChange={(code) => setFormData({ ...formData, countryCode: code })}
-                          // error={errors.phone}
+                          countryId={formData.id_pays_tel}
+                          onValueChange={(phone) => setFormData((prev) => ({ ...prev, phone }))}
+                          onCountryCodeChange={(code) => setFormData((prev) => ({ ...prev, countryCode: code }))}
+                          onCountryIdChange={(id) => setFormData((prev) => ({ ...prev, id_pays_tel: id }))}
                           required
                         />
                       </div>
