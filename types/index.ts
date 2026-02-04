@@ -27,22 +27,26 @@ export type UserAnswers = Record<number, string[]>;
 export type ProfileType = "pro_france" | "creation" | "pro_foreign" | "particulier" | null;
 
 export interface CompanyResult {
-  siren: string;
-  name: string;
-  address: string;
+  siren      : string;
+  name       : string;
+  address    : string;
   postalCode?: string;
-  city?: string;
+  city      ?: string;
+  naf       ?: string;
+  siret     ?: string;
 }
 
 export interface ProfileData {
-  type: ProfileType;
-  company?: CompanyResult;
+  type        : ProfileType;
+  company    ?: CompanyResult;
   companyName?: string;
-  postalCode?: string;
-  city?: string;
-  country?: string;
-  siren?: string;
-  countryID?: number;
+  postalCode ?: string;
+  city       ?: string;
+  country    ?: string;
+  siren      ?: string;
+  siret      ?: string;
+  countryID  ?: number;
+  naf        ?: string;
 }
 
 export interface PostalCodeCity {
