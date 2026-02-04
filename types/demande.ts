@@ -56,6 +56,7 @@ export interface AcheteurData {
   // Options
   website?: string;
   reception_alerte?: boolean;
+  naf?: string;
 }
 
 /**
@@ -102,6 +103,8 @@ export interface DemandeInfoPayload {
   demande_ia?: boolean;
 
   id_rubrique?: number | string;
+
+  tab_matching_acheteur?: string;
 }
 
 /**

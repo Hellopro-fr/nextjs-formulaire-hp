@@ -50,6 +50,7 @@ const SomethingToAddForm = ({ onNext, onBack }: SomethingToAddFormProps) => {
     lastName: "",
     countryCode: "+33",
     phone: "",
+    civility: "",
   });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
