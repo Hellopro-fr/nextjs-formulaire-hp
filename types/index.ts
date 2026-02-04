@@ -119,6 +119,7 @@ export interface ContactFormData {
   lastName: string;
   company?: string;
   countryCode?: string;
+  id_pays_tel?: number;  // ID du pays pour le téléphone
   phone: string;
   message?: string;
 }

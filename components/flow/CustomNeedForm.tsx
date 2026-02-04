@@ -2,7 +2,7 @@
 
 import { ArrowLeft, ArrowRight, Paperclip, Send, UserCheck, X, Mic, MicOff, Shield, Clock, CheckCircle } from "lucide-react";
 import { useState, useRef, useEffect, useMemo } from "react";
-import CountryCodeSelect from "./CountryCodeSelect";
+import PhoneInput from "./PhoneInput";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { trackCustomNeedPageView, trackCustomNeedContactView } from "@/lib/analytics";
@@ -30,6 +30,7 @@ const CustomNeedForm = ({ onBack }: CustomNeedFormProps) => {
     firstName: "",
     lastName: "",
     countryCode: "+33",
+    id_pays_tel: 1, // France par défaut
     phone: "",
   });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -398,28 +399,18 @@ const CustomNeedForm = ({ onBack }: CustomNeedFormProps) => {
                   </div>
 
                   <div>
-                    <label
-                      htmlFor="phone"
-                      className="block text-sm font-medium text-foreground mb-1.5"
-                    >
+                    <label className="block text-sm font-medium text-foreground mb-1.5">
                       Téléphone *
                     </label>
-                    <div className="flex gap-2">
-                      <CountryCodeSelect
-                        value={formData.countryCode}
-                        onChange={(value) => setFormData({ ...formData, countryCode: value })}
-                      />
-                      <input
-                        type="tel"
-                        id="phone"
-                        name="phone"
-                        required
-                        value={formData.phone}
-                        onChange={handleChange}
-                        className="flex-1 rounded-lg border border-input bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-                        placeholder="6 12 34 56 78"
-                      />
-                    </div>
+                    <PhoneInput
+                      value={formData.phone}
+                      countryCode={formData.countryCode}
+                      countryId={formData.id_pays_tel}
+                      onValueChange={(phone) => setFormData((prev) => ({ ...prev, phone }))}
+                      onCountryCodeChange={(countryCode) => setFormData((prev) => ({ ...prev, countryCode }))}
+                      onCountryIdChange={(id_pays_tel) => setFormData((prev) => ({ ...prev, id_pays_tel }))}
+                      required
+                    />
                   </div>
                 </>
               )}
