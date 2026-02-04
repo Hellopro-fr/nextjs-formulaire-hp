@@ -77,7 +77,7 @@ function construireTabMatchingAcheteur({
     id_acheteur     : '',
     type_lead       : type_lead,
     mail            : contact.email,
-    code_postal     : profile.postalCode || '',
+    cp              : profile.postalCode || '',
     pays            : profile.countryID || 1,
     typologie       : profileTypeToStatut(profile.type),
     id_rubrique     : categoryId || '0',
