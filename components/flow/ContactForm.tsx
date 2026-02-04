@@ -97,7 +97,7 @@ const ContactForm = ({ selectedSuppliers, onBack }: ContactFormProps) => {
         firstName: info.prenom || "",
         lastName : info.nom || "",
         phone    : info.tel || "",
-      
+        civility: info.cv || "",
       };
             
     }else{
@@ -389,11 +389,11 @@ const ContactForm = ({ selectedSuppliers, onBack }: ContactFormProps) => {
               className="flex gap-4"
             >
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value="mr" id="civility-mr-cf" />
+                <RadioGroupItem value="1" id="civility-mr-cf" />
                 <Label htmlFor="civility-mr-cf">Monsieur</Label>
               </div>
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value="mme" id="civility-mme-cf" />
+                <RadioGroupItem value="2" id="civility-mme-cf" />
                 <Label htmlFor="civility-mme-cf">Madame</Label>
               </div>
             </RadioGroup>
