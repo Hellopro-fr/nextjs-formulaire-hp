@@ -10,7 +10,7 @@ const ROUTE_MAPPING: Record<string, string> = {
   '/questionnaire': '/',                    // /questionnaire/TOKEN → / (page d'accueil avec questionnaire)
   '/selection': '/selection',               // /selection/TOKEN → /selection
   '/formulaire': '/contact-simple',         // /formulaire/TOKEN → /contact-simple
-  '/something-to-add': '/selection',        // /something-to-add/TOKEN → /selection (redirection par défaut)
+  '/something-to-add': '/something-to-add', // /something-to-add/TOKEN → /something-to-add (ne plus rediriger vers /selection)
 };
 
 // Routes qui nécessitent un token de catégorie valide

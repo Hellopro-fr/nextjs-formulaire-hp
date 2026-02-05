@@ -53,6 +53,7 @@ const type_typologie = {
 
 export function useProcessMatchingLogic() {
   const [showLoader, setShowLoader] = useState(false);
+  const [redirectGoToSomethingToAdd, setRedirectGoToSomethingToAdd] = useState(false);
   const {
     categoryId,
     profileData,
@@ -116,6 +117,8 @@ export function useProcessMatchingLogic() {
         characteristicsMap,
         consolidatedEquivalences
       );
+
+      setRedirectGoToSomethingToAdd(apiData.liste_produit.length < 10);
 
       // ==========================================================================
       // TODO: SUPPRIMER CE BLOC DE TEST - Début du mode test avec IDs fixes
@@ -199,5 +202,6 @@ export function useProcessMatchingLogic() {
   return {
     showLoader,
     submitProfile,
+    redirectGoToSomethingToAdd
   };
 }
