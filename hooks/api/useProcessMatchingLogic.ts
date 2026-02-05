@@ -120,7 +120,6 @@ export function useProcessMatchingLogic() {
         consolidatedEquivalences
       );
 
-<<<<<<< HEAD
       setRedirectGoToSomethingToAdd(apiData.liste_produit.length < 10);
 
       // ==========================================================================
@@ -172,8 +171,6 @@ export function useProcessMatchingLogic() {
       // TODO: SUPPRIMER CE BLOC DE TEST - Fin du mode test
       // ==========================================================================
 
-=======
->>>>>>> bc084f1f9f9eb2f72ccf3c5d7a2776f72a8fb440
       // Stocker les résultats initiaux (avec placeholders)
       setMatchingResults({ recommended, others });
 
