@@ -141,11 +141,13 @@ export function useDynamicQuestionnaire(rubriqueId: string) {
   } = useFlowStore();
 
   // Restaurer l'index à partir des réponses déjà enregistrées dans le store.
-  // Si l'utilisateur revient (ex: retour depuis /profile), on affiche la dernière
-  // question répondue au lieu de repartir à Q1.
+  // Si l'utilisateur revient (ex: retour depuis /profile), on affiche la question suivante.
+  // Si Q1 est pré-remplie via l'URL, on démarre directement à Q2.
   const [currentIndex, setCurrentIndex] = useState(() => {
     const answeredCount = Object.keys(dynamicAnswers).length;
-    return answeredCount > 0 ? answeredCount - 1 : 0;
+    // answeredCount = nombre de questions déjà répondues
+    // On veut afficher la question suivante (index = answeredCount)
+    return answeredCount;
   });
 
   // Appel A : Charger Q1

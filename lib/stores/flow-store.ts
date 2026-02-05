@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage, type StateStorage } from 'zustand/middleware';
 import { useEffect, useState } from 'react';
-import type { ContactFormData, ProfileData, UserAnswers } from '@/types';
+import type { ContactFormData, ProfileData, UserAnswers, Supplier } from '@/types';
 import type { CharacteristicsMap } from '@/types/characteristics';
 
 // =============================================================================
@@ -149,8 +149,16 @@ export interface FlowState {
   // Map des caractéristiques (lookup table pour ID -> label/valeurs)
   characteristicsMap: CharacteristicsMap;
 
+  // Produits orphelins (sélectionnés mais plus dans les nouveaux résultats après modification critères)
+  orphanedSelectedSuppliers: Supplier[];
+
+  // Flag pour indiquer que les critères ont été modifiés
+  criteriaHaveChanged: boolean;
+
   setMatchingResults: (results: { recommended: any[], others: any[] }) => void;
   setCharacteristicsMap: (characteristics: CharacteristicsMap) => void;
+  setOrphanedSelectedSuppliers: (suppliers: Supplier[]) => void;
+  setCriteriaHaveChanged: (changed: boolean) => void;
 
   setFilesStore: (files: File[]) => void;
   addFilesStore: (newFiles: File[]) => void;
@@ -198,6 +206,8 @@ const initialState = {
   equivalenceCaracteristique: [],
   matchingResults: null,
   characteristicsMap: {},
+  orphanedSelectedSuppliers: [],
+  criteriaHaveChanged: false,
 };
 
 export const useFlowStore = create<FlowState>()(
@@ -291,6 +301,10 @@ export const useFlowStore = create<FlowState>()(
       setFlowType: (flowType) => set({ flowType }),
 
       setCharacteristicsMap: (characteristics) => set({ characteristicsMap: characteristics }),
+
+      setOrphanedSelectedSuppliers: (suppliers) => set({ orphanedSelectedSuppliers: suppliers }),
+
+      setCriteriaHaveChanged: (changed) => set({ criteriaHaveChanged: changed }),
 
     }),
     {
