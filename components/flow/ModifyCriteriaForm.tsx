@@ -1,9 +1,10 @@
 'use client';
 
-import { X, GripVertical, Sparkles, Target, Gift, Check } from "lucide-react";
+import { X, GripVertical, Sparkles, Target, Gift, Check, Loader2 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { trackModifyCriteriaModalView, trackCriteriaModified } from "@/lib/analytics";
 import { useFlowStore } from "@/lib/stores/flow-store";
+import { useProcessMatchingLogic } from "@/hooks/api/useProcessMatchingLogic";
 import type {
   ConsolidatedCharacteristic,
   PoidsCaracteristique,
@@ -79,7 +80,9 @@ function characteristicToFormState(
     state.valeurs_cibles_ids = Array.isArray(c.valeurs_cibles)
       ? [...(c.valeurs_cibles as number[])]
       : [];
-    state.valeurs_bloquantes_ids = [...c.valeurs_bloquantes];
+    state.valeurs_bloquantes_ids = Array.isArray(c.valeurs_bloquantes)
+      ? [...c.valeurs_bloquantes]
+      : [];
 
     // Si pas d'options depuis l'API, fallback sur les IDs connus
     if (state.options_disponibles.length === 0) {
@@ -90,8 +93,8 @@ function characteristicToFormState(
       }));
     }
 
-    // Multi-select si plus d'une valeur cible OU si l'API a plus de 2 options
-    state.isMulti = state.valeurs_cibles_ids.length > 1;
+    // Toujours autoriser la sélection multiple pour les caractéristiques textuelles
+    state.isMulti = true;
   } else {
     // Numérique : inputs min/max ou exact
     const val = c.valeurs_cibles;
@@ -143,6 +146,7 @@ function formStateToCharacteristic(s: CriterionFormState): ConsolidatedCharacter
 
 const ModifyCriteriaForm = ({ onBack, onApply }: ModifyCriteriaFormProps) => {
   const { equivalenceCaracteristique, characteristicsMap } = useFlowStore();
+  const { refetchMatchingWithUpdatedCriteria, showLoader } = useProcessMatchingLogic();
 
   const [critiqueCriteria, setCritiqueCriteria] = useState<CriterionFormState[]>([]);
   const [secondaireCriteria, setSecondaireCriteria] = useState<CriterionFormState[]>([]);
@@ -254,7 +258,7 @@ const ModifyCriteriaForm = ({ onBack, onApply }: ModifyCriteriaFormProps) => {
     else setSecondaireCriteria(updateFn);
   };
 
-  const handleApply = () => {
+  const handleApply = async () => {
     const allCriteria = [
       ...critiqueCriteria.map(formStateToCharacteristic),
       ...secondaireCriteria.map(formStateToCharacteristic),
@@ -263,7 +267,13 @@ const ModifyCriteriaForm = ({ onBack, onApply }: ModifyCriteriaFormProps) => {
     const modifiedFields = [...critiqueCriteria, ...secondaireCriteria].map(c => String(c.id_caracteristique));
     trackCriteriaModified(critiqueCriteria.length + secondaireCriteria.length, modifiedFields);
 
-    onApply(allCriteria);
+    // Relancer le matching avec les nouvelles caractéristiques
+    const success = await refetchMatchingWithUpdatedCriteria(allCriteria);
+
+    if (success) {
+      // Appeler onApply pour fermer le modal et mettre à jour l'UI
+      onApply(allCriteria);
+    }
   };
 
   // =========================================================================
@@ -491,11 +501,20 @@ const ModifyCriteriaForm = ({ onBack, onApply }: ModifyCriteriaFormProps) => {
             </button>
             <button
               onClick={handleApply}
-              disabled={!hasCriteria}
+              disabled={!hasCriteria || showLoader}
               className="order-1 sm:order-2 w-full sm:w-auto flex-1 sm:flex-none rounded-lg bg-accent px-8 py-2.5 text-base font-semibold text-accent-foreground hover:bg-accent/90 shadow-lg shadow-accent/25 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Sparkles className="h-5 w-5" />
-              Affiner mes recommandations
+              {showLoader ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  Recherche en cours...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-5 w-5" />
+                  Affiner mes recommandations
+                </>
+              )}
             </button>
           </div>
         </div>

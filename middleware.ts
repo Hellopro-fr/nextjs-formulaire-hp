@@ -65,10 +65,17 @@ function isDateValid(dateStr: string): boolean {
  * Déchiffre un token AES-256-CBC
  * Format du token: Base64URL(IV[16 bytes] + EncryptedData)
  */
+// Interface pour les données URL optionnelles (réponse Q1 pré-remplie)
+interface TokenUrlData {
+  id_question: number;
+  id_reponse: number;
+  equivalence: any[];
+}
+
 async function validateTokenInMiddleware(
   token: string,
   secret: string
-): Promise<{ valid: boolean; categoryId?: number; error?: string }> {
+): Promise<{ valid: boolean; categoryId?: number; urlData?: TokenUrlData; error?: string }> {
   try {
     // 1. Décoder le token Base64 URL-safe en bytes
     const encryptedData = base64UrlDecodeToBytes(token);
@@ -104,7 +111,7 @@ async function validateTokenInMiddleware(
     // 6. Convertir en string et parser le JSON
     const decoder = new TextDecoder();
     const payloadStr = decoder.decode(decryptedBuffer);
-    const payload: { c: number; d: string; t?: number } = JSON.parse(payloadStr);
+    const payload: { c: number; d: string; t?: number; data?: TokenUrlData } = JSON.parse(payloadStr);
 
     // 7. Vérifier la date d'expiration
     if (!payload.d || !isDateValid(payload.d)) {
@@ -116,7 +123,10 @@ async function validateTokenInMiddleware(
       return { valid: false, error: 'invalid_payload' };
     }
 
-    return { valid: true, categoryId: payload.c };
+    // 9. Extraire les données URL optionnelles (réponse Q1 pré-remplie)
+    const urlData = payload.data && payload.data.id_reponse ? payload.data : undefined;
+
+    return { valid: true, categoryId: payload.c, urlData };
   } catch (error) {
     // Erreur de déchiffrement = token invalide
     console.error('[Middleware] Token validation error:', error);
@@ -190,6 +200,17 @@ export async function middleware(request: NextRequest) {
   rewriteUrl.pathname = targetRoute;
   rewriteUrl.searchParams.set('categoryId', String(result.categoryId));
   rewriteUrl.searchParams.set('token', token);
+
+  // Ajouter les données URL si présentes (réponse Q1 pré-remplie)
+  if (result.urlData) {
+    // Encoder en Base64 URL-safe pour passer dans le query param
+    const urlDataJson = JSON.stringify(result.urlData);
+    const urlDataBase64 = btoa(urlDataJson)
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '');
+    rewriteUrl.searchParams.set('urlData', urlDataBase64);
+  }
 
   // Réécrire vers la route cible (l'URL dans le navigateur ne change pas)
   return NextResponse.rewrite(rewriteUrl);

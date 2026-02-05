@@ -43,12 +43,19 @@ interface SupplierSelectionModalProps {
 
 const SupplierSelectionModal = ({userAnswers, onBackToQuestionnaire }: SupplierSelectionModalProps) => {
   // Récupérer les résultats de matching et les caractéristiques depuis le store
-  const { matchingResults, equivalenceCaracteristique, characteristicsMap } = useFlowStore();
+  const {
+    matchingResults,
+    equivalenceCaracteristique,
+    characteristicsMap,
+    orphanedSelectedSuppliers,
+    criteriaHaveChanged
+  } = useFlowStore();
 
   // Utiliser uniquement les résultats dynamiques du matching (pas de fallback statique)
   const RECOMMENDED = matchingResults?.recommended ?? [];
   const OTHERS = matchingResults?.others ?? [];
-  const ALL_SUPPLIERS = [...RECOMMENDED, ...OTHERS];
+  // Merger les produits orphelins avec les nouveaux résultats
+  const ALL_SUPPLIERS = [...orphanedSelectedSuppliers, ...RECOMMENDED, ...OTHERS];
 
   // Formater les critères pour CriteriaTags depuis equivalenceCaracteristique
   const { essentialCriteria, secondaryCriteria } = useMemo(() => {
@@ -86,11 +93,17 @@ const SupplierSelectionModal = ({userAnswers, onBackToQuestionnaire }: SupplierS
   const [searchQuery, setSearchQuery] = useState("");
   const [showComparison, setShowComparison] = useState(false);
   const [criteriaModified, setCriteriaModified] = useState(false);
-  const [showCriteriaChangedBanner, setShowCriteriaChangedBanner] = useState(false);
   const [mobileViewMode, setMobileViewMode] = useState<"grid" | "list">("list");
 
   // Zustand store pour la sélection des fournisseurs et le flowType
-  const { selectedSupplierIds, setSelectedSupplierIds, setFlowType: setStoreFlowType, setEquivalenceCaracteristique } = useFlowStore();
+  const {
+    selectedSupplierIds,
+    setSelectedSupplierIds,
+    setFlowType: setStoreFlowType,
+    setEquivalenceCaracteristique,
+    setOrphanedSelectedSuppliers,
+    setCriteriaHaveChanged
+  } = useFlowStore();
 
   // Convertir le tableau en Set pour les opérations
   const selectedIds = useMemo(() => new Set(selectedSupplierIds), [selectedSupplierIds]);
@@ -237,13 +250,20 @@ const SupplierSelectionModal = ({userAnswers, onBackToQuestionnaire }: SupplierS
               />
 
               {/* Criteria Changed Banner */}
-              {showCriteriaChangedBanner && (
+              {criteriaHaveChanged && selectedSupplierIds.length > 0 && (
                 <CriteriaChangedBanner
                   onNewSelection={() => {
-                    setSelectedSupplierIds([]);
-                    setShowCriteriaChangedBanner(false);
+                    // Reset les orphelins
+                    setOrphanedSelectedSuppliers([]);
+                    // Clear les anciennes sélections et sélectionner les nouveaux top_produits
+                    setSelectedSupplierIds(RECOMMENDED.map((s) => s.id));
+                    // Reset le flag
+                    setCriteriaHaveChanged(false);
                   }}
-                  onDismiss={() => setShowCriteriaChangedBanner(false)}
+                  onDismiss={() => {
+                    // Garder la sélection actuelle, juste cacher la bannière
+                    setCriteriaHaveChanged(false);
+                  }}
                 />
               )}
 
@@ -397,12 +417,7 @@ const SupplierSelectionModal = ({userAnswers, onBackToQuestionnaire }: SupplierS
                 // Mettre à jour le store avec les nouvelles équivalences
                 setEquivalenceCaracteristique(updatedEquivalences);
                 setViewState("selection");
-                if (selectedIds.size > 0) {
-                  setShowCriteriaChangedBanner(true);
-                }
-                // TODO: Relancer le matching API avec les nouvelles équivalences
-                // fetch('/api/matching', { ... updatedEquivalences })
-                // puis setMatchingResults(...)
+                // Le flag criteriaHaveChanged est déjà géré par refetchMatchingWithUpdatedCriteria
               }}
             />
           )}

@@ -19,13 +19,14 @@ export default async function Home({ searchParams }: PageProps) {
   // categoryId vient du token validé par le middleware
   // id_categorie vient du mode dev bypass
   const categoryId = params.categoryId || params.id_categorie;
-  const token = params.token;
+  // urlData contient les données pré-remplies (réponse Q1) si présentes dans le token
+  const urlData = params.urlData;
 
   return (
     <Suspense fallback={null}>
       <QuestionnaireClient
         initialCategoryId={typeof categoryId === 'string' ? categoryId : undefined}
-        initialToken={typeof token === 'string' ? token : undefined}
+        initialUrlData={typeof urlData === 'string' ? urlData : undefined}
       />
     </Suspense>
   );
