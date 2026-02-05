@@ -53,6 +53,7 @@ const type_typologie = {
 
 export function useProcessMatchingLogic() {
   const [showLoader, setShowLoader] = useState(false);
+  const [redirectGoToSomethingToAdd, setRedirectGoToSomethingToAdd] = useState(false);
   const {
     categoryId,
     profileData,
@@ -122,6 +123,57 @@ export function useProcessMatchingLogic() {
         characteristicsMap,
         consolidatedEquivalences
       );
+
+      setRedirectGoToSomethingToAdd(apiData.liste_produit.length < 10);
+
+      // ==========================================================================
+      // TODO: SUPPRIMER CE BLOC DE TEST - Début du mode test avec IDs fixes
+      // ==========================================================================
+      const TEST_MODE = true; // TODO: Mettre à false pour la production
+
+      let finalRecommended = recommended;
+      let finalOthers = others;
+
+      if (TEST_MODE) {
+        // TODO: Supprimer - Créer des suppliers de test avec les IDs 97 et 98
+        const testSuppliers = [
+          {
+            id: '97',
+            productName: 'Produit 97',
+            supplierName: 'Fournisseur Test',
+            image: '/images/product-placeholder.jpg',
+            images: ['/images/product-placeholder.jpg'],
+            description: '',
+            matchScore: 88,
+            matchGaps: [],
+            specs: [],
+            isRecommended: true,
+            rating: 0,
+            distance: 0,
+            supplier: { name: '', description: '', location: '', responseTime: '' }
+          },
+          {
+            id: '98',
+            productName: 'Produit 98',
+            supplierName: 'Fournisseur Test',
+            image: '/images/product-placeholder.jpg',
+            images: ['/images/product-placeholder.jpg'],
+            description: '',
+            matchScore: 75,
+            matchGaps: [],
+            specs: [],
+            isRecommended: true,
+            rating: 0,
+            distance: 0,
+            supplier: { name: '', description: '', location: '', responseTime: '' }
+          },
+        ];
+        finalRecommended = testSuppliers as typeof recommended;
+        finalOthers = [];
+      }
+      // ==========================================================================
+      // TODO: SUPPRIMER CE BLOC DE TEST - Fin du mode test
+      // ==========================================================================
 
       // Stocker les résultats initiaux (avec placeholders)
       setMatchingResults({ recommended, others });
@@ -262,5 +314,6 @@ export function useProcessMatchingLogic() {
     submitProfile,
     refetchMatchingWithUpdatedCriteria,
     resetLoader,
+    redirectGoToSomethingToAdd
   };
 }
