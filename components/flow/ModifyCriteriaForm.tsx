@@ -44,98 +44,6 @@ interface CriterionFormState {
 }
 
 // =============================================================================
-// TODO: SUPPRIMER CETTE SECTION UNE FOIS LE DYNAMIQUE IMPLÉMENTÉ
-// Données statiques en attendant l'API caractéristiques
-// =============================================================================
-
-const STATIC_CRITIQUE_CRITERIA: CriterionFormState[] = [
-  {
-    id_caracteristique: 1,
-    label: "Type de pont",
-    type: 'textuelle',
-    poids_question: 5,
-    poids_caracteristique: 'critique',
-    valeurs_cibles_ids: [1],
-    valeurs_bloquantes_ids: [],
-    options_disponibles: [
-      { id: 1, label: "2 colonnes" },
-      { id: 2, label: "4 colonnes" },
-      { id: 3, label: "Ciseaux" },
-      { id: 4, label: "Fosse" },
-    ],
-    isMulti: false,
-  },
-  {
-    id_caracteristique: 2,
-    label: "Capacité",
-    type: 'textuelle',
-    poids_question: 4,
-    poids_caracteristique: 'critique',
-    valeurs_cibles_ids: [4],
-    valeurs_bloquantes_ids: [],
-    options_disponibles: [
-      { id: 1, label: "2,5 tonnes" },
-      { id: 2, label: "3 tonnes" },
-      { id: 3, label: "3,5 tonnes" },
-      { id: 4, label: "4 tonnes" },
-      { id: 5, label: "5 tonnes" },
-      { id: 6, label: "6 tonnes" },
-    ],
-    isMulti: false,
-  },
-  {
-    id_caracteristique: 3,
-    label: "Alimentation",
-    type: 'textuelle',
-    poids_question: 3,
-    poids_caracteristique: 'critique',
-    valeurs_cibles_ids: [2],
-    valeurs_bloquantes_ids: [],
-    options_disponibles: [
-      { id: 1, label: "230V monophasé" },
-      { id: 2, label: "400V triphasé" },
-    ],
-    isMulti: true,
-  },
-];
-
-const STATIC_SECONDAIRE_CRITERIA: CriterionFormState[] = [
-  {
-    id_caracteristique: 4,
-    label: "Hauteur de levage maximale",
-    type: 'numerique',
-    poids_question: 2,
-    poids_caracteristique: 'secondaire',
-    valeurs_cibles_ids: [],
-    valeurs_bloquantes_ids: [],
-    options_disponibles: [],
-    isMulti: false,
-    unite: 'mm',
-    valeur_numerique_min: 1800,
-    valeur_numerique_max: 2200,
-  },
-  {
-    id_caracteristique: 5,
-    label: "Zone géographique",
-    type: 'textuelle',
-    poids_question: 1,
-    poids_caracteristique: 'secondaire',
-    valeurs_cibles_ids: [1],
-    valeurs_bloquantes_ids: [],
-    options_disponibles: [
-      { id: 1, label: "Île-de-France" },
-      { id: 2, label: "Paris (75)" },
-      { id: 3, label: "Nord" },
-      { id: 4, label: "Est" },
-      { id: 5, label: "Ouest" },
-      { id: 6, label: "Sud" },
-      { id: 7, label: "France entière" },
-    ],
-    isMulti: false,
-  },
-];
-
-// =============================================================================
 // HELPERS : ConsolidatedCharacteristic <-> CriterionFormState
 // =============================================================================
 
@@ -243,18 +151,12 @@ const ModifyCriteriaForm = ({ onBack, onApply }: ModifyCriteriaFormProps) => {
   const hasInitialized = useRef(false);
 
   // Initialiser les critères depuis le store
-  // TODO: Supprimer le fallback statique une fois le dynamique implémenté
   useEffect(() => {
     const consolidated = equivalenceCaracteristique as ConsolidatedCharacteristic[];
     const hasCharacteristicsData = Object.keys(characteristicsMap).length > 0;
 
-    // Si pas de données dynamiques, utiliser les données statiques
+    // Si pas de données dynamiques, ne rien faire
     if (!consolidated || consolidated.length === 0) {
-      if (!hasInitialized.current) {
-        hasInitialized.current = true;
-        setCritiqueCriteria([...STATIC_CRITIQUE_CRITERIA]);
-        setSecondaireCriteria([...STATIC_SECONDAIRE_CRITERIA]);
-      }
       return;
     }
 

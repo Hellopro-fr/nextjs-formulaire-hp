@@ -17,11 +17,11 @@ export async function POST(request: NextRequest) {
     }
 
     const payload = {
-      etape: 'get_info_produit',
+      etape: "get_info_produit",
       scrapping: 1,
-      action: 'get',
+      action: "get",
       data: {
-        id_categorie: id_categorie?.toString() || '',
+        id_categorie: id_categorie?.toString() || "",
         id_produits: id_produits.map(String),
       },
     };
