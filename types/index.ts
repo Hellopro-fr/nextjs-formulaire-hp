@@ -106,6 +106,15 @@ export interface Supplier {
   specs: ProductSpec[];
   supplier: SupplierInfo;
   price?: PriceInfo;
+  debugInfo?: {
+    coeff_geo: number;
+    coeff_type_frns: number;
+    characteristics_debug: Array<{
+      id_caracteristique: number;
+      bareme: number;
+      poids_question: number;
+    }>;
+  };
 }
 
 // ========================================

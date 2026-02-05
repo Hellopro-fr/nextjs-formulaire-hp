@@ -6,14 +6,24 @@
  * Caractéristique d'un produit dans la réponse matching
  */
 export interface MatchingCharacteristic {
-  /** Statut du matching: 1=match, 2=partiel, 3=non-match, 4=absent */
+  /** Statut du matching: 1=match, 2=écart, 3=bloquant, 4=non_renseigné */
   statut_matching: 1 | 2 | 3 | 4;
   /** ID de la caractéristique */
   id_caracteristique: number;
-  /** IDs des valeurs matchées */
+  /** Type: 1=numérique, 2=textuelle */
+  type_caracteristique: 1 | 2;
+  /** Valeur numérique (si type 1) */
+  valeur: number | null;
+  /** Unité (si type 1) */
+  unite: string | null;
+  /** IDs des valeurs (si type 2) */
   id_valeur: number[];
   /** Poids de la caractéristique dans le score */
   poids: number;
+  /** Barème pour debug (ne pas afficher dans UI) */
+  bareme: number;
+  /** Poids question (même valeur qu'envoyée à l'API) */
+  poids_question: number;
 }
 
 /**
@@ -28,30 +38,33 @@ export interface MatchingProduct {
   score: number;
   /** Détails du matching par caractéristique */
   caracteristique: MatchingCharacteristic[];
-  /** true si produit recommandé */
-  top_produit: boolean;
+  /** Coefficient géographique (debug uniquement) */
+  coeff_geo: number;
+  /** Coefficient type fournisseur (debug uniquement) */
+  coeff_type_frns: number;
 }
 
 /**
  * Réponse complète de l'API matching
  */
 export interface MatchingResponse {
-  /** Liste des produits matchés */
+  /** Produits recommandés (top) */
+  top_produit: MatchingProduct[];
+  /** Autres produits */
   liste_produit: MatchingProduct[];
   /** Temps de traitement en secondes */
   temps_de_traitement: number;
-  /** Matchings alternatifs */
-  alternative_matching: unknown[];
 }
 
 /**
  * Statuts de matching avec leur signification
+ * Note: Dans l'UI, les statuts 2 et 3 sont traités comme des écarts
  */
 export const MATCHING_STATUS = {
-  MATCH: 1,
-  PARTIAL: 2,
-  NO_MATCH: 3,
-  ABSENT: 4,
+  MATCH: 1,        // Matche
+  GAP: 2,          // Écart
+  BLOCKING: 3,     // Bloquant (traité comme écart dans l'UI)
+  NOT_PROVIDED: 4, // Non renseigné
 } as const;
 
 export type MatchingStatus = typeof MATCHING_STATUS[keyof typeof MATCHING_STATUS];

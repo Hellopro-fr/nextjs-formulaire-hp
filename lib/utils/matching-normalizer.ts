@@ -13,9 +13,9 @@ import type { ConsolidatedCharacteristic } from './equivalence-merger';
 
 const MATCHING_STATUS_LABELS: Record<number, string> = {
   1: 'Match',
-  2: 'Partiel',
-  3: 'Non-match',
-  4: 'Absent',
+  2: 'Écart',
+  3: 'Bloquant', // Traité comme écart dans l'UI
+  4: 'Non renseigné',
 };
 
 /** Image placeholder pour les produits sans image */
@@ -40,22 +40,34 @@ function getCharacteristicLabel(
 }
 
 /**
- * Récupère les labels des valeurs depuis la map
+ * Récupère les labels des valeurs pour une caractéristique
+ * Gère les types numériques (valeur + unite) et textuels (id_valeur[])
  */
 function getValueLabels(
   characteristicsMap: CharacteristicsMap,
-  idCaracteristique: number,
-  idValeurs: number[]
+  characteristic: MatchingCharacteristic
 ): string {
-  const char = characteristicsMap[idCaracteristique];
-  if (!char || !char.valeurs || idValeurs.length === 0) {
+  const { id_caracteristique, type_caracteristique, valeur, unite, id_valeur } = characteristic;
+
+  // Type numérique (1)
+  if (type_caracteristique === 1) {
+    if (valeur !== null) {
+      const uniteStr = unite ? ` ${unite}` : '';
+      return `${valeur}${uniteStr}`;
+    }
     return '-';
   }
 
-  const labels = idValeurs
+  // Type textuel (2)
+  const char = characteristicsMap[id_caracteristique];
+  if (!char || !char.valeurs || id_valeur.length === 0) {
+    return '-';
+  }
+
+  const labels = id_valeur
     .map((idVal) => {
-      const valeur = char.valeurs.find((v) => v.id === idVal);
-      return valeur?.valeur;
+      const val = char.valeurs.find((v) => v.id === idVal);
+      return val?.valeur;
     })
     .filter(Boolean);
 
@@ -111,38 +123,69 @@ function getExpectedValue(
 }
 
 /**
- * Construit les specs d'un produit à partir des caractéristiques de matching
+ * Construit les specs d'un produit à partir des critères utilisateur
+ * Affiche TOUS les critères demandés, qu'ils soient présents ou non sur le produit
  */
 function buildProductSpecs(
   matchingCharacteristics: MatchingCharacteristic[],
   characteristicsMap: CharacteristicsMap,
   equivalences: ConsolidatedCharacteristic[]
 ): ProductSpec[] {
-  return matchingCharacteristics.map((mc) => {
-    const label = getCharacteristicLabel(characteristicsMap, mc.id_caracteristique);
-    const value = getValueLabels(characteristicsMap, mc.id_caracteristique, mc.id_valeur);
-    const matches = mc.statut_matching === 1;
-    const expected = !matches
-      ? getExpectedValue(characteristicsMap, equivalences, mc.id_caracteristique)
-      : undefined;
-
-    // Vérifier si cette caractéristique était demandée par l'utilisateur
-    const isRequested = equivalences.some(
-      (eq) => eq.id_caracteristique === mc.id_caracteristique
+  return equivalences.map((equivalence) => {
+    // Chercher si le produit possède cette caractéristique
+    const matchingChar = matchingCharacteristics.find(
+      (mc) => mc.id_caracteristique === equivalence.id_caracteristique
     );
 
-    return {
-      label,
-      value,
-      matches,
-      expected,
-      isRequested,
-    };
+    const label = getCharacteristicLabel(characteristicsMap, equivalence.id_caracteristique);
+
+    if (matchingChar) {
+      // Si statut_matching === 4, traiter comme "non renseigné" même si présent
+      if (matchingChar.statut_matching === 4) {
+        const expected = getExpectedValue(characteristicsMap, equivalences, equivalence.id_caracteristique);
+        return {
+          label,
+          value: '-',
+          matches: false,
+          expected,
+          isRequested: true,
+        };
+      }
+
+      // Caractéristique présente avec valeur renseignée
+      // statut_matching === 1 → Match (corresponds)
+      // statut_matching === 2 ou 3 → Écart/Bloquant
+      const value = getValueLabels(characteristicsMap, matchingChar);
+      const matches = matchingChar.statut_matching === 1;
+      const expected = !matches
+        ? getExpectedValue(characteristicsMap, equivalences, equivalence.id_caracteristique)
+        : undefined;
+
+      return {
+        label,
+        value,
+        matches,
+        expected,
+        isRequested: true,
+      };
+    } else {
+      // Caractéristique absente du produit → statut "non renseigné"
+      const expected = getExpectedValue(characteristicsMap, equivalences, equivalence.id_caracteristique);
+
+      return {
+        label,
+        value: '-',
+        matches: false,
+        expected,
+        isRequested: true,
+      };
+    }
   });
 }
 
 /**
  * Construit les matchGaps (écarts de matching) pour un produit
+ * Statuts 2 (écart) et 3 (bloquant) sont traités comme des écarts dans l'UI
  */
 function buildMatchGaps(
   matchingCharacteristics: MatchingCharacteristic[],
@@ -152,22 +195,23 @@ function buildMatchGaps(
   const gaps: string[] = [];
 
   for (const mc of matchingCharacteristics) {
-    // Ignorer les matchs parfaits
+    // Ignorer les matchs parfaits (statut 1)
     if (mc.statut_matching === 1) continue;
 
     const label = getCharacteristicLabel(characteristicsMap, mc.id_caracteristique);
-    const value = getValueLabels(characteristicsMap, mc.id_caracteristique, mc.id_valeur);
+    const value = getValueLabels(characteristicsMap, mc);
     const expected = getExpectedValue(characteristicsMap, equivalences, mc.id_caracteristique);
 
     if (mc.statut_matching === 4) {
-      // Caractéristique absente
+      // Caractéristique non renseignée
       gaps.push(`${label} : non disponible`);
-    } else if (expected) {
-      // Non-match ou partiel avec valeur attendue
-      gaps.push(`${label} : ${value} (demandé ${expected})`);
-    } else {
-      // Non-match sans valeur attendue connue
-      gaps.push(`${label} : ${value}`);
+    } else if (mc.statut_matching === 2 || mc.statut_matching === 3) {
+      // Écart (2) ou Bloquant (3) - traités de la même façon dans l'UI
+      if (expected) {
+        gaps.push(`${label} : ${value} (demandé ${expected})`);
+      } else {
+        gaps.push(`${label} : ${value}`);
+      }
     }
   }
 
@@ -180,7 +224,8 @@ function buildMatchGaps(
 function normalizeProduct(
   product: MatchingProduct,
   characteristicsMap: CharacteristicsMap,
-  equivalences: ConsolidatedCharacteristic[]
+  equivalences: ConsolidatedCharacteristic[],
+  isRecommended: boolean
 ): Supplier {
   const specs = buildProductSpecs(
     product.caracteristique,
@@ -206,8 +251,8 @@ function normalizeProduct(
     // Images placeholder
     image: PLACEHOLDER_IMAGE,
     images: [PLACEHOLDER_IMAGE],
-    // Recommandé si top_produit
-    isRecommended: product.top_produit,
+    // Passé en paramètre selon la liste (top_produit ou liste_produit)
+    isRecommended,
     isCertified: false,
     // Specs et gaps calculés
     specs,
@@ -220,6 +265,16 @@ function normalizeProduct(
       description: '',
       location: '',
       responseTime: '',
+    },
+    // Champs de debug (non affichés dans l'UI)
+    debugInfo: {
+      coeff_geo: product.coeff_geo,
+      coeff_type_frns: product.coeff_type_frns,
+      characteristics_debug: product.caracteristique.map(c => ({
+        id_caracteristique: c.id_caracteristique,
+        bareme: c.bareme,
+        poids_question: c.poids_question,
+      })),
     },
   };
 }
@@ -235,24 +290,29 @@ export interface NormalizedMatchingResult {
 
 /**
  * Normalise la réponse de l'API matching vers le format attendu par l'UI
+ * L'API retourne désormais deux listes séparées : top_produit et liste_produit
  *
- * @param products - liste_produit de la réponse matching
+ * @param topProducts - top_produit de la réponse (recommandés)
+ * @param otherProducts - liste_produit de la réponse (autres)
  * @param characteristicsMap - Map des caractéristiques (id → définition)
  * @param equivalences - Critères utilisateur consolidés (equivalenceCaracteristique du store)
  * @returns { recommended: Supplier[], others: Supplier[] }
  */
 export function normalizeMatchingToSuppliers(
-  products: MatchingProduct[],
+  topProducts: MatchingProduct[],
+  otherProducts: MatchingProduct[],
   characteristicsMap: CharacteristicsMap,
   equivalences: ConsolidatedCharacteristic[]
 ): NormalizedMatchingResult {
-  const normalized = products.map((product) =>
-    normalizeProduct(product, characteristicsMap, equivalences)
+  // Normaliser les produits recommandés
+  const recommended = topProducts.map((product) =>
+    normalizeProduct(product, characteristicsMap, equivalences, true)
   );
 
-  // Séparer recommended (top_produit=true) et others
-  const recommended = normalized.filter((s) => s.isRecommended);
-  const others = normalized.filter((s) => !s.isRecommended);
+  // Normaliser les autres produits
+  const others = otherProducts.map((product) =>
+    normalizeProduct(product, characteristicsMap, equivalences, false)
+  );
 
   // Trier par score décroissant
   recommended.sort((a, b) => b.matchScore - a.matchScore);

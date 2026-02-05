@@ -112,12 +112,15 @@ export function useProcessMatchingLogic() {
       const apiData: MatchingResponse = await res.json();
 
       // Normaliser les données de matching vers le format Supplier
+      // L'API retourne maintenant deux listes séparées : top_produit et liste_produit
       const { recommended, others } = normalizeMatchingToSuppliers(
+        apiData.top_produit,
         apiData.liste_produit,
         characteristicsMap,
         consolidatedEquivalences
       );
 
+<<<<<<< HEAD
       setRedirectGoToSomethingToAdd(apiData.liste_produit.length < 10);
 
       // ==========================================================================
@@ -169,23 +172,25 @@ export function useProcessMatchingLogic() {
       // TODO: SUPPRIMER CE BLOC DE TEST - Fin du mode test
       // ==========================================================================
 
+=======
+>>>>>>> bc084f1f9f9eb2f72ccf3c5d7a2776f72a8fb440
       // Stocker les résultats initiaux (avec placeholders)
-      setMatchingResults({ recommended: finalRecommended, others: finalOthers });
+      setMatchingResults({ recommended, others });
 
       // Enrichir les recommandés avec les infos produit (prioritaire)
-      const recommendedIds = finalRecommended.map((s) => s.id);
+      const recommendedIds = recommended.map((s) => s.id);
       if (recommendedIds.length > 0) {
         const productInfo = await fetchProductInfo(recommendedIds, categoryId, apiBase);
         if (productInfo?.items) {
-          const enrichedRecommended = enrichSuppliersWithProductInfo(finalRecommended, productInfo.items);
-          setMatchingResults({ recommended: enrichedRecommended, others: finalOthers });
+          const enrichedRecommended = enrichSuppliersWithProductInfo(recommended, productInfo.items);
+          setMatchingResults({ recommended: enrichedRecommended, others });
 
           // Ensuite enrichir les "others" en background
-          const othersIds = finalOthers.map((s) => s.id);
+          const othersIds = others.map((s) => s.id);
           if (othersIds.length > 0) {
             fetchProductInfo(othersIds, categoryId, apiBase).then((othersInfo) => {
               if (othersInfo?.items) {
-                const enrichedOthers = enrichSuppliersWithProductInfo(finalOthers, othersInfo.items);
+                const enrichedOthers = enrichSuppliersWithProductInfo(others, othersInfo.items);
                 setMatchingResults({ recommended: enrichedRecommended, others: enrichedOthers });
               }
             });
