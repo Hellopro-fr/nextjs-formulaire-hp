@@ -261,6 +261,7 @@ const SomethingToAddForm = ({ onNext, onBack }: SomethingToAddFormProps) => {
       submittedAt: new Date().toISOString(),
       userKnownStatus,
       categoryId: categoryId?.toString(),
+      source: 1, // AO
     });
 
     // onNext();

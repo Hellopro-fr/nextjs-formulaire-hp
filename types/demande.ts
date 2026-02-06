@@ -29,10 +29,12 @@ export interface AcheteurData {
   prenom: string;
 
   // Contact
-  mail: string;
-  telephone: string;
+  mail          : string;
+  telephone     : string;
   indicatif_tel?: string;
-  isKnown?: string;
+  isKnown      ?: string;
+  id_pays_tel   : number;
+
 
   // Entreprise
   societe: string;
@@ -105,6 +107,8 @@ export interface DemandeInfoPayload {
   id_rubrique?: number | string;
 
   tab_matching_acheteur?: string;
+
+  info_acheteur_matching?: string;
 }
 
 /**
