@@ -21,12 +21,15 @@ export default async function Home({ searchParams }: PageProps) {
   const categoryId = params.categoryId || params.id_categorie;
   // urlData contient les données pré-remplies (réponse Q1) si présentes dans le token
   const urlData = params.urlData;
+  // token original pour la redirection après F5
+  const token = params.token;
 
   return (
     <Suspense fallback={null}>
       <QuestionnaireClient
         initialCategoryId={typeof categoryId === 'string' ? categoryId : undefined}
         initialUrlData={typeof urlData === 'string' ? urlData : undefined}
+        initialToken={typeof token === 'string' ? token : undefined}
       />
     </Suspense>
   );

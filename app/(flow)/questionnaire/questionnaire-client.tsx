@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import NeedsQuestionnaire from '@/components/flow/NeedsQuestionnaire';
-import { useFlowStore, useFlowStoreHydration } from '@/lib/stores/flow-store';
+import { useFlowStore, useFlowStoreHydration, FLOW_ORIGINAL_TOKEN_KEY } from '@/lib/stores/flow-store';
 import { useFlowNavigation } from '@/hooks/useFlowNavigation';
 
 // Interface pour les données URL (réponse Q1 pré-remplie)
@@ -16,11 +16,13 @@ interface UrlData {
 interface QuestionnaireClientProps {
   initialCategoryId?: string;
   initialUrlData?: string; // Base64 encoded URL data
+  initialToken?: string;   // Token original pour redirection après F5
 }
 
 export default function QuestionnaireClient({
   initialCategoryId,
-  initialUrlData
+  initialUrlData,
+  initialToken
 }: QuestionnaireClientProps) {
   const searchParams = useSearchParams();
   const { setCategoryId, setDynamicAnswer, dynamicAnswers } = useFlowStore();
@@ -32,7 +34,7 @@ export default function QuestionnaireClient({
   // On attend que les données URL soient traitées avant de rendre
   const [isReady, setIsReady] = useState(false);
 
-  // Récupérer et stocker le categoryId
+  // Récupérer et stocker le categoryId + sauvegarder le token original
   // Priorité : props du Server Component > searchParams client
   useEffect(() => {
     let categoryId = initialCategoryId;
@@ -48,7 +50,16 @@ export default function QuestionnaireClient({
         setCategoryId(id);
       }
     }
-  }, [initialCategoryId, searchParams, setCategoryId]);
+
+    // Sauvegarder le token original dans sessionStorage (separe du flow-store)
+    // Ce token sera utilise pour la redirection apres F5
+    // Priorite : prop du Server Component > searchParams client
+    const token = initialToken || searchParams.get('token');
+    if (token && typeof window !== 'undefined') {
+      sessionStorage.setItem(FLOW_ORIGINAL_TOKEN_KEY, token);
+      console.log('[QuestionnaireClient] Token saved for redirect:', token.substring(0, 20) + '...');
+    }
+  }, [initialCategoryId, initialToken, searchParams, setCategoryId]);
 
   // Traiter les données URL (réponse Q1 pré-remplie depuis le token)
   // Doit s'exécuter AVANT que le questionnaire ne soit rendu

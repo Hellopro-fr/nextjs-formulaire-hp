@@ -102,10 +102,21 @@ export function useProcessMatchingLogic() {
       const typologie = data?.type;
       const typologieValue = type_typologie[typologie as keyof typeof type_typologie] || "1";
 
-      const metadonnee_utilisateurs = {
-          "pays":  data?.country || '',
+      // Construire metadonnee_utilisateurs avec id_pays et cp si disponibles
+      const metadonnee_utilisateurs: Record<string, string | number> = {
+        "pays": data?.country || '',
           "typologie": typologieValue
-      } ;
+      };
+
+      // Ajouter id_pays si disponible (vient de l'API geo)
+      if (data?.countryID) {
+        metadonnee_utilisateurs["id_pays"] = data.countryID;
+      }
+
+      // Ajouter cp (code postal) si disponible
+      if (data?.postalCode) {
+        metadonnee_utilisateurs["cp"] = data.postalCode;
+      }
 
       const formData = new FormData();
       formData.append('id_categorie', categoryId?.toString() || '');
@@ -133,11 +144,15 @@ export function useProcessMatchingLogic() {
         characteristicsMap,
         consolidatedEquivalences
       );
+      
 
-      setRedirectGoToSomethingToAdd(apiData.liste_produit.length < 2);
-
+      
+      // TODO a dynamiser
+      // setRedirectGoToSomethingToAdd(apiData.liste_produit.length < 10);
+      
       // Tracking DB - Matching results
-      if (apiData.liste_produit.length < 2) {
+      // TODO a dynamiser tracking si pas assez de produits
+      if (false) {
         // Insufficient results
         trackDbEvent('matching', 'insufficient_results', {
           results_count: apiData.liste_produit.length,
