@@ -56,7 +56,10 @@ function getUserId(): string {
 /**
  * Obtenir ou créer un ID de session (temporaire)
  */
-function getSessionId(): string {
+/**
+ * Obtenir ou créer un ID de session (temporaire)
+ */
+export function getSessionId(): string {
   if (typeof window === 'undefined') return 'unknown';
 
   let sessionId = sessionStorage.getItem('hp_session_id');

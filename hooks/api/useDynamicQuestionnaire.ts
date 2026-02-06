@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useFlowStore } from '@/lib/stores/flow-store';
 import { basePath } from '@/lib/utils';
 import type { CharacteristicDefinition, CharacteristicsMap } from '@/types/characteristics';
+import { useDbTracking } from '@/hooks/tracking/useDbTracking';
 
 // Toujours utiliser le proxy Next.js pour éviter les problèmes CORS
 const getApiBasePath = () => {
@@ -139,6 +140,8 @@ export function useDynamicQuestionnaire(rubriqueId: string) {
     characteristicsMap,
     setCharacteristicsMap,
   } = useFlowStore();
+
+  const { trackDbEvent } = useDbTracking();
 
   // Restaurer l'index à partir des réponses déjà enregistrées dans le store.
   // Si l'utilisateur revient (ex: retour depuis /profile), on affiche la question suivante.
@@ -276,6 +279,14 @@ export function useDynamicQuestionnaire(rubriqueId: string) {
       .flatMap((a) => Array.isArray(a.equivalence) ? a.equivalence : []);
 
     setDynamicAnswer(questionCode, answerCodes, selectedEquivalences);
+
+    // Tracking DB
+    trackDbEvent('questionnaire', 'question_answer', {
+      question_id: currentQuestion.id,
+      question_code: questionCode,
+      answer_ids: answerCodes,
+      equivalences: selectedEquivalences
+    }, categoryId, currentIndex + 1); // step_index = numéro de la question (1-based)
 
     setCurrentIndex((prev) => prev + 1);
   };

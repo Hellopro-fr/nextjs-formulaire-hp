@@ -16,6 +16,7 @@ import { toast } from "@/hooks/use-toast";
 
 // Analytics imports
 import { trackContactFormView, trackFormValidationErrors } from "@/lib/analytics";
+import { useDbTracking } from "@/hooks/tracking/useDbTracking";
 
 interface ContactFormProps {
   selectedSuppliers: Supplier[];
@@ -38,6 +39,7 @@ const ContactForm = ({ selectedSuppliers, onBack }: ContactFormProps) => {
   
 
   const leadSubmission = useLeadSubmission({ suppliers: selectedSuppliers });
+  const { trackDbEvent } = useDbTracking();
 
   const [formData, setFormData] = useState<ContactFormData>({
     email: "",
@@ -224,6 +226,15 @@ const ContactForm = ({ selectedSuppliers, onBack }: ContactFormProps) => {
     });
 
     setContactData(finalData);
+
+    // Tracking DB - Contact form submission
+    trackDbEvent('contact', 'form_submit', {
+      email: finalData.email,
+      is_known_buyer: isKnownBuyer,
+      has_files: (finalData.files?.length || 0) > 0,
+      files_count: finalData.files?.length || 0,
+      selected_suppliers_count: selectedSupplierIds.length
+    }, categoryId, 1);
 
     // Submit lead
     leadSubmission.mutate({

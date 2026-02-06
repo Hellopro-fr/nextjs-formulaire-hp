@@ -26,6 +26,7 @@ import {
   setFlowType,
 } from "@/lib/analytics";
 import { Supplier } from "@/types";
+import { useDbTracking } from "@/hooks/tracking/useDbTracking";
 
 type ViewState = "selection" | "contact" | "modify-criteria" | "custom-need";
 
@@ -102,8 +103,11 @@ const SupplierSelectionModal = ({userAnswers, onBackToQuestionnaire }: SupplierS
     setFlowType: setStoreFlowType,
     setEquivalenceCaracteristique,
     setOrphanedSelectedSuppliers,
-    setCriteriaHaveChanged
+    setCriteriaHaveChanged,
+    categoryId
   } = useFlowStore();
+
+  const { trackDbEvent } = useDbTracking();
 
   // Convertir le tableau en Set pour les opérations
   const selectedIds = useMemo(() => new Set(selectedSupplierIds), [selectedSupplierIds]);
@@ -158,8 +162,15 @@ const SupplierSelectionModal = ({userAnswers, onBackToQuestionnaire }: SupplierS
     setSelectedSupplierIds(newIds);
     setAnimatingCount(true);
 
-    // Track add/remove selection
+    // Track add/remove selection (GTM)
     trackProductSelectionChange(id, isRemoving ? 'retirer' : 'ajouter', newIds.length);
+
+    // Track DB
+    trackDbEvent('selection', isRemoving ? 'deselect' : 'select', {
+      product_id: id,
+      action: isRemoving ? 'retirer' : 'ajouter',
+      total_selected: newIds.length
+    }, categoryId);
   };
 
   const resetSelection = () => {

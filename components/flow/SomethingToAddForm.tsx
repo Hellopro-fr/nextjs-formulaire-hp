@@ -14,6 +14,7 @@ import { trackCustomNeedPageView, trackCustomNeedContactView, setFlowType, track
 import { useLeadSubmission } from "@/hooks/api/useLeadSubmission";
 import { validatePhoneNumber } from "@/lib/utils/phone-validation";
 import { toast } from "@/hooks/use-toast";
+import { useDbTracking } from "@/hooks/tracking/useDbTracking";
 
 // Mock list of existing buyers in database
 const EXISTING_BUYERS = [
@@ -159,6 +160,7 @@ const SomethingToAddForm = ({ onNext, onBack }: SomethingToAddFormProps) => {
   const isFormValid = !showAdditionalFields || !!formData.civility;
 
   const leadSubmission = useLeadSubmission();
+  const { trackDbEvent } = useDbTracking();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -252,6 +254,16 @@ const SomethingToAddForm = ({ onNext, onBack }: SomethingToAddFormProps) => {
     });
 
     setContactData(finalData);
+
+    // Tracking DB - Something to add form submission
+    trackDbEvent('contact', 'form_submit_custom_need', {
+      email: finalData.email,
+      is_known_buyer: isKnownBuyer,
+      has_description: !!description,
+      has_files: (finalData.files?.length || 0) > 0,
+      files_count: finalData.files?.length || 0,
+      flow_type: flowType
+    }, categoryId, 1);
 
     leadSubmission.mutate({
       contact: finalData,

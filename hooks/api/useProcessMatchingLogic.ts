@@ -4,6 +4,7 @@ import { consolidateEquivalences } from '@/lib/utils/equivalence-merger';
 import { normalizeMatchingToSuppliers, enrichSuppliersWithProductInfo } from '@/lib/utils/matching-normalizer';
 import type { ProfileData } from '@/types';
 import type { MatchingResponse, ProductInfoResponse } from '@/types/matching';
+import { useDbTracking } from '@/hooks/tracking/useDbTracking';
 
 import { basePath } from '@/lib/utils';
 
@@ -67,6 +68,8 @@ export function useProcessMatchingLogic() {
     setCriteriaHaveChanged
   } = useFlowStore();
 
+  const { trackDbEvent } = useDbTracking();
+
   /**
    * Logique de consolidation des équivalences :
    * 1. Collecter toutes les équivalences avec poids_question
@@ -86,6 +89,13 @@ export function useProcessMatchingLogic() {
     setEquivalenceCaracteristique(consolidatedEquivalences);
 
     setShowLoader(true);
+
+    // Tracking DB - Profile completion
+    trackDbEvent('profile', 'complete', {
+      profile_type: data?.type,
+      country: data?.country,
+      equivalences_count: consolidatedEquivalences.length
+    }, categoryId, 1); // step_index = 1 (une seule étape pour le profil)
 
     try {
 
@@ -124,7 +134,25 @@ export function useProcessMatchingLogic() {
         consolidatedEquivalences
       );
 
-      setRedirectGoToSomethingToAdd(apiData.liste_produit.length < 10);
+      setRedirectGoToSomethingToAdd(apiData.liste_produit.length < 2);
+
+      // Tracking DB - Matching results
+      if (apiData.liste_produit.length < 2) {
+        // Insufficient results
+        trackDbEvent('matching', 'insufficient_results', {
+          results_count: apiData.liste_produit.length,
+          threshold: 2,
+          product_ids: apiData.liste_produit.map((p: any) => p.id_produit)
+        }, categoryId, 1);
+      } else {
+        // Sufficient results
+        trackDbEvent('matching', 'success', {
+          results_count: apiData.liste_produit.length,
+          threshold: 2,
+          product_ids: apiData.liste_produit.map((p: any) => p.id_produit),
+          top_product_ids: apiData.top_produit?.map((p: any) => p.id_produit) || []
+        }, categoryId, 1);
+      }
 
       // ==========================================================================
       // TODO: SUPPRIMER CE BLOC DE TEST - Début du mode test avec IDs fixes

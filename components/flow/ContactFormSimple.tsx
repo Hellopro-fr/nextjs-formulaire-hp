@@ -12,6 +12,7 @@ import { validatePhoneNumber } from "@/lib/utils/phone-validation";
 import { toast } from "@/hooks/use-toast";
 import { trackFormValidationErrors } from "@/lib/analytics";
 import type { ContactFormData } from "@/types";
+import { useDbTracking } from "@/hooks/tracking/useDbTracking";
 
 // Mock list of existing buyers in database
 const EXISTING_BUYERS = [
@@ -62,6 +63,7 @@ const ContactFormSimple = ({ onBack }: ContactFormSimpleProps) => {
 
   const leadSubmission = useLeadSubmission();
   const { profileData, userAnswers, selectedSupplierIds, setContactData, categoryId } = useFlowStore();
+  const { trackDbEvent } = useDbTracking();
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -142,6 +144,12 @@ const ContactFormSimple = ({ onBack }: ContactFormSimpleProps) => {
 
     setContactData(finalData);
     console.log("Submitting contact form data:", { finalData, profileData, userAnswers, selectedSupplierIds, userKnownStatus });
+
+    // Tracking DB - Contact form submission (simple)
+    trackDbEvent('contact', 'form_submit_simple', {
+      email: finalData.email,
+      is_known_buyer: isExistingBuyer
+    }, categoryId, 1);
     leadSubmission.mutate({
       contact: finalData,
       profile: profileData!,
