@@ -141,6 +141,7 @@ export interface LeadSubmission {
   submittedAt: string;
   userKnownStatus: 'known' | 'unknown';
   categoryId?: string;
+  source?: number;
 }
 
 export interface LeadResponse {

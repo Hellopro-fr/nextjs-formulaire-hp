@@ -26,7 +26,6 @@ export default function ProfileClient({
     // Reset loader state before navigation
     resetLoader();
     // Navigate to selection step after loader finishes (with GET params preserved)
-    console.log("redirectGoToSomethingToAdd:", redirectGoToSomethingToAdd);
     if(redirectGoToSomethingToAdd) {
       goToSomethingToAdd();
     }

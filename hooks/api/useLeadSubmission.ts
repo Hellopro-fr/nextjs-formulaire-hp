@@ -69,9 +69,10 @@ function construireTabMatchingAcheteur({
     selectedSupplierIds,
     submittedAt,
     userKnownStatus,
-    categoryId } = values;
+    categoryId,
+    source } = values;
 
-  const type_lead = id_produit ? "exclusif" : "apo";
+  const type_lead = source == 2 ? "exclusif" : "apo";
 
   const objectInfoAcheteur = {
     id_acheteur     : '',
@@ -105,7 +106,7 @@ export function useLeadSubmission(options: UseLeadSubmissionOptions = {}) {
       const payload: DemandeInfoPayload = {
         form_ab : 'form_ux_matching',
         acheteur: {
-          civilite      : '',
+          civilite      : data.contact.civility || '',
           nom           : data.contact.lastName,
           prenom        : data.contact.firstName,
           mail          : data.contact.email,
@@ -119,14 +120,16 @@ export function useLeadSubmission(options: UseLeadSubmissionOptions = {}) {
           pays          : data.profile.countryID || 1,                                                                // 1 = France par défaut
           statut        : profileTypeToStatut(data.profile.type),
           naf           : data.profile.naf || '',
+          id_pays_tel   : data.contact.id_pays_tel || 1,
         },
-        message      : data.contact.message || 'Demande de devis via UX Matching',
-        produits     : suppliersToProduitsSelection(data.selectedSupplierIds, suppliers, data),
-        criteres     : data.answers,
-        souhait_devis: true,
-        demande_ia   : true,
-        provenance_di: 'ux_matching',
-        id_rubrique  : data.categoryId || '0'
+        message               : data.contact.message || 'Demande de devis via UX Matching',
+        produits              : suppliersToProduitsSelection(data.selectedSupplierIds, suppliers, data),
+        criteres              : data.answers,
+        souhait_devis         : data.source === 2, 
+        demande_ia            : true,
+        provenance_di         : 'ux_matching',
+        id_rubrique           : data.categoryId || '0',
+        info_acheteur_matching: construireTabMatchingAcheteur({ values: data }),
       };
 
       // Envoyer les demandes au PHP

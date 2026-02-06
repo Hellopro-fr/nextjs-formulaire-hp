@@ -135,7 +135,8 @@ export function useProcessMatchingLogic() {
         consolidatedEquivalences
       );
 
-      setRedirectGoToSomethingToAdd(apiData.liste_produit.length < 10);
+      // TODO a dynamiser
+      // setRedirectGoToSomethingToAdd(apiData.liste_produit.length < 10);
 
       // ==========================================================================
       // TODO: SUPPRIMER CE BLOC DE TEST - Début du mode test avec IDs fixes
