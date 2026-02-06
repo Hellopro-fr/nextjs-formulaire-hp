@@ -129,7 +129,7 @@ const SomethingToAddForm = ({ onNext, onBack }: SomethingToAddFormProps) => {
           firstName: info.prenom || "",
           lastName : info.nom || "",
           phone    : info.tel || "",
-        
+          civility: info.cv || "",
         };
               
       }else{
@@ -541,12 +541,12 @@ const SomethingToAddForm = ({ onNext, onBack }: SomethingToAddFormProps) => {
                           className="flex gap-6"
                         >
                           <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="mr" id="civility-mr-staf" />
-                            <Label htmlFor="civility-mr-staf" className="cursor-pointer">Mr</Label>
+                            <RadioGroupItem value="1" id="civility-mr-staf" />
+                            <Label htmlFor="civility-mr-staf" className="cursor-pointer">Monsieur</Label>
                           </div>
                           <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="mme" id="civility-mme-staf" />
-                            <Label htmlFor="civility-mme-staf" className="cursor-pointer">Mme</Label>
+                            <RadioGroupItem value="2" id="civility-mme-staf" />
+                            <Label htmlFor="civility-mme-staf" className="cursor-pointer">Madame</Label>
                           </div>
                         </RadioGroup>
                       </div>
