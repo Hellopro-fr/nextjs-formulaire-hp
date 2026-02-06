@@ -150,6 +150,7 @@ const ContactFormSimple = ({ onBack }: ContactFormSimpleProps) => {
       submittedAt: new Date().toISOString(),
       userKnownStatus,
       categoryId: categoryId?.toString(),
+      source: 1, // AO
     });
   };
 
