@@ -5,74 +5,116 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import PhoneInput from "./PhoneInput";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { trackCustomNeedPageView, trackCustomNeedContactView, trackFormValidationErrors } from "@/lib/analytics";
-import { useLeadSubmission } from "@/hooks/api/useLeadSubmission";
-import { validatePhoneNumber } from "@/lib/utils/phone-validation";
-import { toast } from "@/hooks/use-toast";
+import { trackCustomNeedPageView, trackCustomNeedContactView } from "@/lib/analytics";
 import { useFlowStore } from "@/lib/stores/flow-store";
-import { useDbTracking } from "@/hooks/tracking/useDbTracking";
-
-// Mock list of existing buyers in database
-const EXISTING_BUYERS = [
-  "jean.dupont@entreprise.fr",
-  "marie.martin@societe.com",
-  "contact@hellopro.fr",
-  "acheteur@garage-martin.fr",
-];
+import { useBuyerCheck } from "@/hooks/api";
+import { ContactFormData } from "@/types";
 
 interface CustomNeedFormProps {
   onBack: () => void;
 }
 
 const CustomNeedForm = ({ onBack }: CustomNeedFormProps) => {
+  const {
+    categoryId,
+    setContactData,
+    profileData,
+    files: filesStore,
+    setFilesStore,
+    addFilesStore
+  } = useFlowStore();
+
   const [currentStep, setCurrentStep] = useState(1);
   const [description, setDescription] = useState("");
   const [fileName, setFileName] = useState<string | null>(null);
+
+  const [files, setFiles] = useState<File[]>([]);
+
   const [isListening, setIsListening] = useState(false);
-  const [formData, setFormData] = useState({
+
+  const [formData, setFormData] = useState<ContactFormData>({
     email: "",
+    isKnown: false,
     civility: "",
     firstName: "",
     lastName: "",
+    company: profileData?.company?.name || profileData?.companyName || "",
     countryCode: "+33",
     id_pays_tel: 1, // France par défaut
     phone: "",
+    message: "",
   });
 
-  const [errors, setErrors] = useState<Partial<Record<keyof typeof formData, string>>>({});
-  const [files, setFiles] = useState<File[]>([]);
-
-  const { setContactData, files: filesStore, addFilesStore, flowType, profileData, userAnswers, selectedSupplierIds, categoryId } = useFlowStore();
-  const leadSubmission = useLeadSubmission();
-  const { trackDbEvent } = useDbTracking();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
 
-  // Check if email is from an existing buyer
-  const isExistingBuyer = useMemo(() => {
-    if (!formData.email || formData.email.length < 5) return false;
-    return EXISTING_BUYERS.some(
-      (email) => email.toLowerCase() === formData.email.toLowerCase()
-    );
-  }, [formData.email]);
-
-  // Check if email is valid format
   const isEmailValid = useMemo(() => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(formData.email);
   }, [formData.email]);
 
-  // Show additional fields only if email is valid and not an existing buyer
-  const showAdditionalFields = isEmailValid && !isExistingBuyer;
+  // Check if email is from an existing buyer
+  // Dynamic buyer check via API
+  const { data: buyerCheckResult } = useBuyerCheck(
+    {
+      email: formData.email,
+      rubriqueId: categoryId?.toString(),
+    },
+    isEmailValid
+  );
+
+  const isExistingBuyer = buyerCheckResult?.isDuplicate || false;
+  const isKnownBuyer = buyerCheckResult?.isKnown || false;
+
+  useEffect(() => {
+    let updatedData: ContactFormData | null = null;
+
+    // 1. On vérifie si l'acheteur est reconnu et si on a les données
+    if (isKnownBuyer && buyerCheckResult?.infoBuyer) {
+      const info = buyerCheckResult.infoBuyer as any;
+
+      // 2. On prépare l'objet complet avec les clés de votre interface ContactFormData
+      updatedData = {
+        ...formData,                   // On garde le message et les autres champs
+        email: formData.email,      // L'email déjà saisi
+        isKnown: true,
+        firstName: info.prenom || "",
+        lastName: info.nom || "",
+        phone: info.tel || "",
+        civility: info.cv || "",
+      };
+
+    } else {
+      updatedData = {
+        ...formData,
+        email: formData.email,
+        isKnown: false,
+        firstName: "",
+        lastName: "",
+        phone: "",
+        countryCode: formData.countryCode || "+33",
+        id_pays_tel: formData.id_pays_tel || 1,
+      };
+    }
+
+    if (updatedData) {
+      setFormData(updatedData);
+    }
+
+    // On ne déclenche cet effet que lorsque 'isKnownBuyer' ou 'infoBuyer' change
+  }, [isKnownBuyer, buyerCheckResult?.infoBuyer]);
+
+  // Show additional fields only if email is valid and not a known buyer
+  const showAdditionalFields = isEmailValid && !isKnownBuyer;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
+    if (e.target.files && e.target.files[0]) {
+      setFileName(e.target.files[0].name);
       const newFiles = Array.from(e.target.files);
       setFiles(prev => [...prev, ...newFiles]);
-      setFileName(newFiles[0].name);
-      // Update store if helper available
-      if (addFilesStore) addFilesStore(newFiles);
-      e.target.value = '';
+
+      // 2. Mise à jour du store (pour la persistance/soumission)
+      addFilesStore(newFiles);
     }
   };
 
@@ -84,68 +126,17 @@ const CustomNeedForm = ({ onBack }: CustomNeedFormProps) => {
 
   const isFormValid = !showAdditionalFields || !!formData.civility;
 
-  const validateForm = (): boolean => {
-    const newErrors: Partial<Record<keyof typeof formData, string>> = {};
-
-    if (!formData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "Email invalide";
-    }
-    if (!formData.civility) {
-      newErrors.civility = "Civilité requise";
-    }
-    if (!formData.firstName.trim()) {
-      newErrors.firstName = "Prénom requis";
-    }
-    if (!formData.lastName.trim()) {
-      newErrors.lastName = "Nom requis";
-    }
-
-    const phoneValidation = validatePhoneNumber(formData.phone, formData.countryCode || "+33");
-    if (!phoneValidation.isValid) {
-      newErrors.phone = phoneValidation.error || "Téléphone invalide";
-    }
-
-    setErrors(newErrors);
-
-    if (Object.keys(newErrors).length > 0) {
-      const errorList = Object.entries(newErrors).map(([field, message]) => ({
-        field,
-        type: field === 'email' || field === 'phone' ? 'invalid_format' : 'required',
-        message: message || '',
-      }));
-      trackFormValidationErrors(errorList.length, errorList);
-
-      if (newErrors.civility) {
-        toast({
-          variant: "destructive",
-          title: "Champ requis",
-          description: newErrors.civility,
-        });
-      }
-    }
-
-    return Object.keys(newErrors).length === 0;
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!isExistingBuyer) {
-      const isValid = validateForm();
-      if (!isValid) return;
-    }
+    if (!isFormValid) return;
 
-    const userKnownStatus = isExistingBuyer ? 'known' as const : 'unknown' as const;
-
-    const finalData: any = {
+    const finalData = {
       ...formData,
-      files: filesStore || files,
-      message: description
+      files: filesStore // On s'assure que les fichiers du store sont inclus
     };
 
-    finalData.files = finalData.files || files;
-
-    finalData.files.forEach((file: File, index: number) => {
+    finalData.files.forEach((file, index) => {
       console.log(`Fichier ${index}:`, {
         nom: file.name,
         taille: file.size,
@@ -155,28 +146,8 @@ const CustomNeedForm = ({ onBack }: CustomNeedFormProps) => {
 
     setContactData(finalData);
 
-    // Tracking DB - Something to add form submission
-    trackDbEvent('contact', 'form_submit_custom_need', {
-      email: finalData.email,
-      is_known_buyer: isExistingBuyer,
-      has_description: !!description,
-      has_files: (finalData.files?.length || 0) > 0,
-      files_count: finalData.files?.length || 0,
-      flow_type: flowType
-    }, categoryId, 1);
-
-    leadSubmission.mutate({
-      contact: finalData,
-      profile: profileData!,
-      answers: userAnswers,
-      selectedSupplierIds: selectedSupplierIds,
-      submittedAt: new Date().toISOString(),
-      userKnownStatus,
-      categoryId: categoryId?.toString(),
-      source: 1, // AO
-    });
-
-    // onBack();
+    console.log("Form submitted:", { description, fileName, ...formData });
+    onBack();
   };
 
   // Ref pour éviter les doubles appels en StrictMode
@@ -434,11 +405,16 @@ const CustomNeedForm = ({ onBack }: CustomNeedFormProps) => {
                   className="w-full rounded-lg border border-input bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                   placeholder="vous@entreprise.com"
                 />
-                {errors.email && <p className="mt-1 text-sm text-destructive">{errors.email}</p>}
-                {isExistingBuyer && (
+                {isKnownBuyer && (
                   <div className="mt-2 flex items-center gap-2 text-sm text-green-600">
                     <CheckCircle className="h-4 w-4" />
                     <span>Nous vous avons reconnu ! Vos informations sont pré-enregistrées.</span>
+                  </div>
+                )}
+                {isExistingBuyer && buyerCheckResult?.message && (
+                  <div className="mt-2 flex items-center gap-2 text-sm text-orange-600">
+                    <Shield className="h-4 w-4" />
+                    <span>{buyerCheckResult.message}</span>
                   </div>
                 )}
               </div>
@@ -457,11 +433,11 @@ const CustomNeedForm = ({ onBack }: CustomNeedFormProps) => {
                       className="flex gap-4"
                     >
                       <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="mr" id="civility-mr-cnf" />
+                        <RadioGroupItem value="1" id="civility-mr-cnf" />
                         <Label htmlFor="civility-mr-cnf">Monsieur</Label>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="mme" id="civility-mme-cnf" />
+                        <RadioGroupItem value="2" id="civility-mme-cnf" />
                         <Label htmlFor="civility-mme-cnf">Madame</Label>
                       </div>
                     </RadioGroup>
@@ -484,7 +460,6 @@ const CustomNeedForm = ({ onBack }: CustomNeedFormProps) => {
                         onChange={handleChange}
                         className="w-full rounded-lg border border-input bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                       />
-                      {errors.firstName && <p className="mt-1 text-sm text-destructive">{errors.firstName}</p>}
                     </div>
                     <div>
                       <label
@@ -502,7 +477,6 @@ const CustomNeedForm = ({ onBack }: CustomNeedFormProps) => {
                         onChange={handleChange}
                         className="w-full rounded-lg border border-input bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                       />
-                      {errors.lastName && <p className="mt-1 text-sm text-destructive">{errors.lastName}</p>}
                     </div>
                   </div>
 
@@ -512,12 +486,12 @@ const CustomNeedForm = ({ onBack }: CustomNeedFormProps) => {
                     </label>
                     <PhoneInput
                       value={formData.phone}
-                      countryCode={formData.countryCode}
+                      countryCode={formData.countryCode || "+33"}
                       countryId={formData.id_pays_tel}
                       onValueChange={(phone) => setFormData((prev) => ({ ...prev, phone }))}
-                      onCountryCodeChange={(countryCode) => setFormData((prev) => ({ ...prev, countryCode }))}
-                      onCountryIdChange={(id_pays_tel) => setFormData((prev) => ({ ...prev, id_pays_tel }))}
-                      error={errors.phone}
+                      onCountryCodeChange={(code) => setFormData((prev) => ({ ...prev, countryCode: code }))}
+                      onCountryIdChange={(id) => setFormData((prev) => ({ ...prev, id_pays_tel: id }))}
+                      // error={errors.phone}
                       required
                     />
                   </div>
