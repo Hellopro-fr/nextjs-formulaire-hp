@@ -63,6 +63,8 @@ export interface ProductSpec {
   matches?: boolean;
   expected?: string;
   isRequested?: boolean;
+  /** Statut de matching: 1=match, 2=ecart, 3=bloquant, 4=non_renseigne */
+  matchingStatus?: 1 | 2 | 3 | 4;
 }
 
 export interface MediaItem {

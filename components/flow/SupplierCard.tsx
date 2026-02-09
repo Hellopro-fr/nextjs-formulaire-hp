@@ -92,13 +92,16 @@ const SupplierCard = ({
     onToggle(id);
   };
 
+  // matches === true → OK (statut 1)
+  // matches === false → Écart (statut 2/3)
+  // matches === undefined → Non renseigné (statut 4)
   const matchingSpecs = specs.filter((spec) => spec.matches === true);
-  const nonMatchingSpecs = specs.filter((spec) => spec.matches === false);
-  const unknownSpecs = specs.filter((spec) => spec.matches === undefined || spec.matches === null);
+  const gapSpecs = specs.filter((spec) => spec.matches === false); // Vrais écarts
+  const notProvidedSpecs = specs.filter((spec) => spec.matches === undefined || spec.matches === null); // Non renseigné
   const isMobileList = viewMode === "list";
-  
-  // Calculate total gaps (non-matching specs or matchGaps)
-  const totalGaps = nonMatchingSpecs.length > 0 ? nonMatchingSpecs.length : matchGaps.length;
+
+  // Total des écarts (seulement les vrais écarts, pas les non-renseignés)
+  const totalGaps = gapSpecs.length > 0 ? gapSpecs.length : matchGaps.length;
 
   // Mobile List View
   const mobileListView = isMobileList ? (
@@ -271,7 +274,7 @@ const SupplierCard = ({
           </div>
         </div>
 
-        {/* Gaps + Unknown - More discrete */}
+        {/* Gaps + Non renseigné - More discrete */}
         <div className="flex items-center gap-3 text-xs text-muted-foreground mb-1">
           {totalGaps > 0 && (
             <div className="flex items-center gap-1 opacity-70">
@@ -279,10 +282,10 @@ const SupplierCard = ({
               <span>{totalGaps} écart{totalGaps > 1 ? 's' : ''}</span>
             </div>
           )}
-          {unknownSpecs.length > 0 && (
+          {notProvidedSpecs.length > 0 && (
             <div className="flex items-center gap-1 opacity-70">
               <HelpCircle className="h-3 w-3" />
-              <span>{unknownSpecs.length} N/A</span>
+              <span>{notProvidedSpecs.length} non renseigné{notProvidedSpecs.length > 1 ? 's' : ''}</span>
             </div>
           )}
         </div>
@@ -292,13 +295,13 @@ const SupplierCard = ({
           {totalGaps > 0 ? (
             <>
               <div className="flex flex-wrap gap-1 overflow-hidden flex-1">
-                {(nonMatchingSpecs.length > 0 ? nonMatchingSpecs : matchGaps).slice(0, 1).map((item, idx) => (
+                {(gapSpecs.length > 0 ? gapSpecs : matchGaps).slice(0, 1).map((item, idx) => (
                   <span
                     key={idx}
                     className="inline-flex items-center rounded bg-amber-50 border border-amber-200/50 px-1.5 py-0.5 text-[10px] text-amber-700"
                   >
-                    {typeof item === 'string' 
-                      ? item 
+                    {typeof item === 'string'
+                      ? item
                       : (
                         <>
                           {item.label}: {item.value}
@@ -311,7 +314,7 @@ const SupplierCard = ({
                   </span>
                 ))}
               </div>
-              {(nonMatchingSpecs.length > 1 || matchGaps.length > 1) && (
+              {(gapSpecs.length > 1 || matchGaps.length > 1) && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -319,7 +322,7 @@ const SupplierCard = ({
                   }}
                   className="text-[10px] text-amber-600 hover:text-amber-800 transition-colors ml-2 flex-shrink-0"
                 >
-                  +{Math.max(nonMatchingSpecs.length, matchGaps.length) - 1}
+                  +{Math.max(gapSpecs.length, matchGaps.length) - 1}
                 </button>
               )}
             </>

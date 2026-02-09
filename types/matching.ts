@@ -12,10 +12,14 @@ export interface MatchingCharacteristic {
   id_caracteristique: number;
   /** Type: 1=numérique, 2=textuelle */
   type_caracteristique: 1 | 2;
-  /** Valeur numérique (si type 1) */
-  valeur: number | null;
+  /** Valeur numérique exacte (si type 1) */
+  valeur?: number | string | null;
+  /** Valeur numérique min (si type 1, pour les plages) */
+  valeur_min?: number | string | null;
+  /** Valeur numérique max (si type 1, pour les plages) */
+  valeur_max?: number | string | null;
   /** Unité (si type 1) */
-  unite: string | null;
+  unite?: string | null;
   /** IDs des valeurs (si type 2) */
   id_valeur: number[];
   /** Poids de la caractéristique dans le score */

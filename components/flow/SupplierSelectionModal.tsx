@@ -123,9 +123,11 @@ const SupplierSelectionModal = ({userAnswers, onBackToQuestionnaire }: SupplierS
   }, [matchingResults]);
 
   // Séparer les produits en fonction de leur sélection
+  // Note: ALL_SUPPLIERS doit être dans les dépendances pour que les listes se recalculent
+  // quand matchingResults change (ex: après modification des critères)
   const selectedSuppliersList = useMemo(() => {
     return ALL_SUPPLIERS.filter((s) => selectedIds.has(s.id));
-  }, [selectedIds]);
+  }, [ALL_SUPPLIERS, selectedIds]);
 
   const unselectedSuppliersList = useMemo(() => {
     const unselected = ALL_SUPPLIERS.filter((s) => !selectedIds.has(s.id));
@@ -137,7 +139,7 @@ const SupplierSelectionModal = ({userAnswers, onBackToQuestionnaire }: SupplierS
         s.supplierName.toLowerCase().includes(query) ||
         s.description.toLowerCase().includes(query)
     );
-  }, [selectedIds, searchQuery]);
+  }, [ALL_SUPPLIERS, selectedIds, searchQuery]);
 
   const initialSelectedIds = useMemo(
     () => new Set(RECOMMENDED.map((s) => s.id)),
@@ -264,12 +266,16 @@ const SupplierSelectionModal = ({userAnswers, onBackToQuestionnaire }: SupplierS
               {criteriaHaveChanged && selectedSupplierIds.length > 0 && (
                 <CriteriaChangedBanner
                   onNewSelection={() => {
-                    // Reset les orphelins
-                    setOrphanedSelectedSuppliers([]);
-                    // Clear les anciennes sélections et sélectionner les nouveaux top_produits
-                    setSelectedSupplierIds(RECOMMENDED.map((s) => s.id));
-                    // Reset le flag
-                    setCriteriaHaveChanged(false);
+                    // Récupérer les IDs des nouveaux top_produits (recommandés)
+                    const newRecommendedIds = RECOMMENDED.map((s) => s.id);
+
+                    // Mise à jour atomique de tous les états en un seul batch
+                    // pour éviter les problèmes de synchronisation
+                    useFlowStore.setState({
+                      orphanedSelectedSuppliers: [],
+                      selectedSupplierIds: newRecommendedIds,
+                      criteriaHaveChanged: false
+                    });
                   }}
                   onDismiss={() => {
                     // Garder la sélection actuelle, juste cacher la bannière
