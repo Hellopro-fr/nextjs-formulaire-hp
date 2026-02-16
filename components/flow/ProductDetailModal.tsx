@@ -41,19 +41,33 @@ const ProductDetailModal = ({ product, onClose, onSelect, isSelected }: ProductD
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
+  const [vendorDescriptionExpanded, setVendorDescriptionExpanded] = useState(false);
   const [isDescriptionTruncated, setIsDescriptionTruncated] = useState(false);
+  const [isVendorTruncated, setIsVendorTruncated] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
   const descriptionRef = useRef<HTMLDivElement>(null);
+  const vendorRef = useRef<HTMLDivElement>(null);
 
-  // Track modal view on mount + Check if description is truncated
+  // Reset image loaded state when media changes
   useEffect(() => {
-    // Track product modal view (only once per product per session)
-    trackProductModalView(product.id, product.name, product.supplier.name);
+    setImageLoaded(false);
+  }, [currentMediaIndex]);
+
+  // Track modal view on mount + Check if descriptions are truncated
+  useEffect(() => {
+    // Track product modal view (is_first_view = première ouverture de modal produit quelconque)
+    trackProductModalView(product.id);
 
     if (descriptionRef.current) {
       const element = descriptionRef.current;
       setIsDescriptionTruncated(element.scrollHeight > element.clientHeight);
     }
-  }, [product.id, product.name, product.supplier.name, product.descriptionHtml, product.description]);
+
+    if (vendorRef.current) {
+      const element = vendorRef.current;
+      setIsVendorTruncated(element.scrollHeight > element.clientHeight);
+    }
+  }, [product.id, product.name, product.supplier.name, product.descriptionHtml, product.description, product.supplier.description]);
 
   // Build media array from images or media prop
   const mediaItems: MediaItem[] = product.media || product.images.map(url => ({ type: "image" as const, url }));
@@ -107,11 +121,24 @@ const ProductDetailModal = ({ product, onClose, onSelect, isSelected }: ProductD
                 onClick={() => setLightboxOpen(true)}
                 className="w-full h-full relative group cursor-zoom-in"
               >
-                <img
-                  src={currentMedia?.url}
-                  alt={product.name}
-                  className="w-full h-full object-contain bg-muted"
-                />
+                {currentMedia?.url ? (
+                  <img
+                    src={currentMedia.url}
+                    alt={product.name}
+                    className={cn(
+                      "w-full h-full object-contain bg-muted transition-opacity duration-300",
+                      imageLoaded ? "opacity-100" : "opacity-0"
+                    )}
+                    onLoad={() => setImageLoaded(true)}
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      // TODO: Implement better fallback for missing images
+                    }}
+                  />
+                ) : (
+                  // TODO: Implement better fallback for missing images
+                  <div className="w-full h-full bg-muted" />
+                )}
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
                   <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-background/90 rounded-full p-3 shadow-lg">
                     <ZoomIn className="h-5 w-5 text-foreground" />
@@ -389,10 +416,10 @@ const ProductDetailModal = ({ product, onClose, onSelect, isSelected }: ProductD
                   </h4>
 
                   <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
-                    {/* <span className="flex items-center gap-1 text-match-high">
+                    {<span className="flex items-center gap-1 text-match-high">
                       <Truck className="h-4 w-4" />
                       Livre dans votre zone
-                    </span> */}
+                    </span>}
                     <span className="flex items-center gap-1">
                       <Clock className="h-4 w-4" />
                       {product.supplier.responseTime}
@@ -401,9 +428,44 @@ const ProductDetailModal = ({ product, onClose, onSelect, isSelected }: ProductD
                 </div>
               </div>
 
-              <p className="mt-4 text-sm text-muted-foreground leading-relaxed">
-                {product.supplier.description}
-              </p>
+              <div className="relative mt-4">
+                <div
+                  ref={vendorRef}
+                  className={cn(
+                    "text-sm text-muted-foreground leading-relaxed prose prose-sm max-w-none",
+                    "prose-strong:text-foreground prose-strong:font-semibold",
+                    "prose-ul:list-disc prose-ul:pl-4 prose-ul:space-y-1",
+                    "prose-li:text-muted-foreground",
+                    !vendorDescriptionExpanded && "max-h-[8rem] overflow-hidden"
+                  )}
+                  dangerouslySetInnerHTML={{ __html: product.supplier.description }}
+                />
+
+                {/* Gradient overlay when truncated */}
+                {!vendorDescriptionExpanded && isVendorTruncated && (
+                  <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-card to-transparent pointer-events-none" />
+                )}
+              </div>
+
+              {/* Show more/less button */}
+              {isVendorTruncated && (
+                <button
+                  onClick={() => setVendorDescriptionExpanded(!vendorDescriptionExpanded)}
+                  className="mt-2 flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+                >
+                  {vendorDescriptionExpanded ? (
+                    <>
+                      <ChevronUp className="h-4 w-4" />
+                      Voir moins
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="h-4 w-4" />
+                      Voir plus
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           </div>
         </div>

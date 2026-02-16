@@ -19,7 +19,6 @@ export async function POST(request: NextRequest) {
     }
 
     const url = new URL(URL_API_QUESTION);
-    console.log('Calling Questionnaire Q1 API:', url.toString());
 
      const payloadQN = {
       etape: "question",
@@ -48,8 +47,6 @@ export async function POST(request: NextRequest) {
     }
 
     const data = await response.json();
-
-    console.log("API QN", data);
 
     return NextResponse.json(data, { status: 200 });
   } catch (error) {

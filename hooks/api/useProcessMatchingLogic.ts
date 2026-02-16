@@ -46,10 +46,10 @@ const getApiBasePath = () => {
 };
 
 const type_typologie = {
-  "pro_france": "1",
-  "pro_foreign": "2",
-  "particulier": "3",
-  "creation": "4",
+  "pro_france": "1",      // Professionnel
+  "pro_foreign": "1",     // Professionnel
+  "particulier": "2",     // Particulier
+  "creation": "1",        // Professionnel
 };
 
 export function useProcessMatchingLogic() {
@@ -123,6 +123,13 @@ export function useProcessMatchingLogic() {
       formData.append('top_k', '12');
       formData.append('metadonnee_utilisateurs', JSON.stringify(metadonnee_utilisateurs));
       formData.append('liste_caracteristique', JSON.stringify(consolidatedEquivalences));
+
+      console.log('Payload MATCHING :', {
+        id_categorie: categoryId,
+        top_k: 12,
+        metadonnee_utilisateurs,
+        liste_caracteristique: consolidatedEquivalences
+      });
 
       const apiBase = getApiBasePath();
       const apiUrl = `${apiBase}/api/matching`;
@@ -263,16 +270,33 @@ export function useProcessMatchingLogic() {
       const typologie = profileData?.type;
       const typologieValue = type_typologie[typologie as keyof typeof type_typologie] || "1";
 
-      const metadonnee_utilisateurs = {
+      const metadonnee_utilisateurs: Record<string, string | number> =  {
         "pays": profileData?.country || '',
         "typologie": typologieValue
       };
+
+      // Ajouter id_pays si disponible (vient de l'API geo)
+      if (profileData?.countryID) {
+        metadonnee_utilisateurs["id_pays"] = profileData.countryID;
+      }
+
+      // Ajouter cp (code postal) si disponible
+      if (profileData?.postalCode) {
+        metadonnee_utilisateurs["cp"] = profileData.postalCode;
+      }
 
       const formData = new FormData();
       formData.append('id_categorie', categoryId?.toString() || '');
       formData.append('top_k', '12');
       formData.append('metadonnee_utilisateurs', JSON.stringify(metadonnee_utilisateurs));
       formData.append('liste_caracteristique', JSON.stringify(updatedEquivalences));
+
+      console.log('Payload MATCHING (client - refetch):', {
+        id_categorie: categoryId,
+        top_k: 12,
+        metadonnee_utilisateurs,
+        liste_caracteristique: updatedEquivalences
+      });
 
       const apiBase = getApiBasePath();
       const apiUrl = `${apiBase}/api/matching`;

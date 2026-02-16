@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 // const BASE_URL = process.env.HELLOPRO_API_URL || 'https://www.hellopro.fr';
 
 const BASE_URL         = 'https://api.hellopro.eu';
-const URL_API_MATCHING = `${BASE_URL}/graphdebug-service/produits/matching`;
+const URL_API_MATCHING = `${BASE_URL}/graph-service/produits/matching`;
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,7 +21,6 @@ export async function POST(request: NextRequest) {
     }
 
     const url = new URL(URL_API_MATCHING);
-    console.log('Calling API_MATCHING API:', url.toString());    
     
     // Reconstruction du payload avec les bons types
     const payload = {
@@ -52,8 +51,6 @@ export async function POST(request: NextRequest) {
     }
 
     const data = await response.json();
-
-    console.log("API_MATCHING", data);
 
     return NextResponse.json(data, { status: 200 });
   } catch (error) {
