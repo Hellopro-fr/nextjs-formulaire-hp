@@ -20,7 +20,7 @@ export default function ProfileClient({
   priorityCountries,
   otherCountries,
 }: ProfileClientProps) {
-  const { goToSelection, goToGeoZone, goToSomethingToAdd } = useFlowNavigation();
+  const { goToSelection, goToSomethingToAdd } = useFlowNavigation();
   const { showLoader, submitProfile, redirectGoToSomethingToAdd } = useProcessMatchingLogic();
   const { geoData } = useFlowStore();
 
@@ -35,8 +35,8 @@ export default function ProfileClient({
   };
 
   const handleBack = () => {
-    // Navigate back to geo-zone step
-    goToGeoZone();
+    // Navigate back to selection/contact step
+    goToSelection();
   };
 
   if (showLoader) {
