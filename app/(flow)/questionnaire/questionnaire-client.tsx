@@ -29,7 +29,7 @@ export default function QuestionnaireClient({
 }: QuestionnaireClientProps) {
   const searchParams = useSearchParams();
   const { setCategoryId, setDynamicAnswer, dynamicAnswers, addUserQuestionAnswer, setDdc, setMatchingTestParams } = useFlowStore();
-  const { goToProfile } = useFlowNavigation();
+  const { goToGeoZone } = useFlowNavigation();
   const hasProcessedUrlData = useRef(false);
   const isHydrated = useFlowStoreHydration();
 
@@ -201,7 +201,7 @@ export default function QuestionnaireClient({
 
   const handleComplete = () => {
     // Navigate to profile step with GET params preserved
-    goToProfile();
+    goToGeoZone();
   };
 
   // Attendre que les données URL soient traitées avant de rendre le questionnaire

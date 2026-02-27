@@ -8,7 +8,7 @@ import type { GeoData } from '@/lib/stores/flow-store';
 
 export default function GeoZoneClient() {
   const { setGeoData } = useFlowStore();
-  const { goToQuestionnaire, goToProfile } = useFlowNavigation();
+  const { goToQuestionnaire, goToProfile, goToSelection } = useFlowNavigation();
   const hasTrackedView = useRef(false);
 
   // Track page view au montage
@@ -23,7 +23,8 @@ export default function GeoZoneClient() {
     // Sauvegarder les données dans le store
     setGeoData(data);
     // Aller vers le profil
-    goToProfile();
+    // goToProfile();
+    goToSelection();
   };
 
   const handleBack = () => {
