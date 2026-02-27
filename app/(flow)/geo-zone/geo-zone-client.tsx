@@ -47,8 +47,8 @@ const getApiBasePath = () => {
 
 export default function GeoZoneClient() {
   const { setGeoData, categoryId, dynamicEquivalences, characteristicsMap, setMatchingResults } = useFlowStore();
-  const { goToQuestionnaire, goToSelection } = useFlowNavigation();
   const [showLoader, setShowLoader] = useState(false);
+  const { goToQuestionnaire, goToProfile, goToSelection } = useFlowNavigation();
   const hasTrackedView = useRef(false);
 
   // Track page view au montage
