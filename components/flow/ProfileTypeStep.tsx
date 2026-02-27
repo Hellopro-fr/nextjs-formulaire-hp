@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect, useRef } from "react";
-import { ArrowLeft, ArrowRight, Search, Building2, Sparkles, Globe, User, MapPin, Loader2 } from "lucide-react";
+import { ArrowLeft, Search, Building2, Sparkles, Globe, User, MapPin, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ProgressHeader from "./ProgressHeader";
 import { useSirenSearch } from "@/hooks/api";
@@ -13,6 +13,7 @@ import {
   trackProfileView,
   trackProfileComplete,
 } from "@/lib/analytics";
+import { Send } from "lucide-react";
 
 
 interface Country {
@@ -20,11 +21,18 @@ interface Country {
   libelle: string;
 }
 
+interface GeoData {
+  country: string;
+  postalCode: string;
+  city: string;
+}
+
 interface ProfileTypeStepProps {
   priorityCountries: Country[];
   otherCountries: Country[];
   onComplete: (data: ProfileData) => void;
   onBack: () => void;
+  geoData?: GeoData;
 }
 
 const STEPS = [
@@ -33,7 +41,7 @@ const STEPS = [
   { id: 3, label: "Demande de devis" },
 ];
 
-const ProfileTypeStep = ({ priorityCountries, otherCountries, onComplete, onBack }: ProfileTypeStepProps) => {
+const ProfileTypeStep = ({ priorityCountries, otherCountries, onComplete, onBack, geoData }: ProfileTypeStepProps) => {
   // Store Zustand pour persistance dans sessionStorage
   const { setProfileData } = useFlowStore();
 
@@ -1015,8 +1023,8 @@ const ProfileTypeStep = ({ priorityCountries, otherCountries, onComplete, onBack
                       : "bg-muted text-muted-foreground cursor-not-allowed"
                   )}
                 >
-                  Suivant
-                  <ArrowRight className="h-4 w-4" />
+                  <Send className="h-4 w-4" />
+                  Valider ma demande
                 </button>
               </div>
             </div>
@@ -1042,8 +1050,8 @@ const ProfileTypeStep = ({ priorityCountries, otherCountries, onComplete, onBack
                     : "bg-muted text-muted-foreground cursor-not-allowed"
                 )}
               >
-                Suivant
-                <ArrowRight className="h-5 w-5" />
+                <Send className="h-5 w-5" />
+                Valider ma demande
               </button>
             </div>
           </div>
