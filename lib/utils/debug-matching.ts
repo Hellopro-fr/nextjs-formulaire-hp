@@ -99,6 +99,11 @@ async function getFournisseur(id_produit: string): Promise<FournisseurData | nul
 }
 
 function debugInfo(): void {
+  // Activer le mode debug pour les boutons de copie dans les modals produit
+  (window as any).__debugModeEnabled = true;
+  window.dispatchEvent(new Event('enableDebugMode'));
+  console.log('[DEBUG] Copy buttons enabled in product modals');
+
   const storageData = sessionStorage.getItem('flow-storage');
   if (!storageData) {
     console.error('Pas de flow-storage trouve');
@@ -327,7 +332,7 @@ function debugInfo(): void {
         <div><span style="color:#888">matchScore: </span><span style="color:#ff0">${product.matchScore}%</span></div>
         <div><span style="color:#888">isRecommended: </span>${product.isRecommended}</div>
         <div><span style="color:#888">coeff_geo: </span>${debug.coeff_geo ?? 'N/A'}</div>
-        <div><span style="color:#888">coeff_type_frns: </span>${debug.coeff_type_frns ?? 'N/A'}</div>
+        <div><span style="color:#888">Typologie acheteur: </span>${debug.coeff_type_frns ?? 'N/A'}</div>
       </div>
       <div style="color:#fff;font-weight:bold;margin:6px 0 4px;border-bottom:1px solid #333;padding-bottom:2px">
         Caracteristiques (${chars.length})
@@ -554,7 +559,7 @@ function debugInfo(): void {
       <div style="display:grid;grid-template-columns:1fr;gap:6px;margin-bottom:12px;padding:8px;background:#111;border-radius:4px">
         <table>
           <tr>
-            <td><div><span style="color:#888">ID:</span> <span style="color:#0ff"><a target="_blank" href="https://www.hellopro.fr/${productName}-2012230-${product.id}-produit.html">${product.id}</a></span></div></td>
+            <td><div><span style="color:#888">ID:</span> <span style="color:#0ff">${product.id}</span></div></td>
             <td><div><span style="color:#888">matchScore:</span> <span style="color:#ff0;font-weight:bold">${product.matchScore}%</span></div></td>
             <td><div><span style="color:#888">coeff_geo:</span> <span style="color:#0f0">${debug.coeff_geo ?? 'N/A'}</span></div></td>
           </tr>
@@ -565,7 +570,7 @@ function debugInfo(): void {
           </tr>
           <tr>
             <td><div><span style="color:#888">isRecommended:</span> ${product.isRecommended ? '<span style="color:#0f0">true</span>' : '<span style="color:#f88">false</span>'}</div></td>
-            <td><div><span style="color:#888">coeff_type_frns:</span> <span style="color:#0f0">${debug.coeff_type_frns ?? 'N/A'}</span></div></td>
+            <td><div><span style="color:#888">Typologie acheteur:</span> <span style="color:#0f0">${debug.coeff_type_frns ?? 'N/A'}</span></div></td>
             <td></td>
           </tr>
         </table>

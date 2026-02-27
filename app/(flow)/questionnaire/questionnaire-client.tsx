@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import NeedsQuestionnaire from '@/components/flow/NeedsQuestionnaire';
-import { useFlowStore, useFlowStoreHydration, FLOW_ORIGINAL_TOKEN_KEY } from '@/lib/stores/flow-store';
+import { useFlowStore, useFlowStoreHydration, FLOW_ORIGINAL_TOKEN_KEY, type MatchingTestParams } from '@/lib/stores/flow-store';
 import { useFlowNavigation } from '@/hooks/useFlowNavigation';
+import { useDbTracking } from '@/hooks/tracking/useDbTracking';
 
 // Interface pour les données URL (réponse Q1 pré-remplie)
 interface UrlData {
@@ -27,7 +28,7 @@ export default function QuestionnaireClient({
   initialDdc
 }: QuestionnaireClientProps) {
   const searchParams = useSearchParams();
-  const { setCategoryId, setDynamicAnswer, dynamicAnswers, addUserQuestionAnswer, setDdc } = useFlowStore();
+  const { setCategoryId, setDynamicAnswer, dynamicAnswers, addUserQuestionAnswer, setDdc, setMatchingTestParams } = useFlowStore();
   const { goToProfile } = useFlowNavigation();
   const hasProcessedUrlData = useRef(false);
   const isHydrated = useFlowStoreHydration();
@@ -57,12 +58,12 @@ export default function QuestionnaireClient({
 
     if (initialDdc) {
       setDdc(initialDdc);
-      console.log('[QuestionnaireClient] DDC set from initial props:', initialDdc);
+      //console.log('[QuestionnaireClient] DDC set from initial props:', initialDdc);
     }
 
     if(initialDdc){
       setDdc(initialDdc);
-      console.log('[QuestionnaireClient] DDC set from initial props:', initialDdc);
+      //console.log('[QuestionnaireClient] DDC set from initial props:', initialDdc);
     }
     // Sauvegarder le token original dans sessionStorage (separe du flow-store)
     // Ce token sera utilise pour la redirection apres F5
@@ -70,12 +71,53 @@ export default function QuestionnaireClient({
     const token = initialToken || searchParams.get('token');
     if (token && typeof window !== 'undefined') {
       sessionStorage.setItem(FLOW_ORIGINAL_TOKEN_KEY, token);
-      console.log('[QuestionnaireClient] Token saved for redirect:', token.substring(0, 20) + '...');
+      //console.log('[QuestionnaireClient] Token saved for redirect:', token.substring(0, 20) + '...');
     }
   }, [initialCategoryId, initialToken, searchParams, setCategoryId, initialDdc]);
 
+  // Lire les paramètres de test du matching depuis l'URL (pour tests uniquement)
+  useEffect(() => {
+    const testParamKeys: (keyof MatchingTestParams)[] = [
+      'z_unmatched',
+      'e_unmatched',
+      'g_unknown_score',
+      'c_unknown_score',
+      'v_blocked',
+      'v_different',
+      't_unmatched',
+    ];
+
+    console.log('[QuestionnaireClient] Reading scoring params from URL...');
+    console.log('[QuestionnaireClient] Current URL searchParams:', Object.fromEntries(searchParams.entries()));
+
+    const params: MatchingTestParams = {};
+    let hasAnyParam = false;
+
+    for (const key of testParamKeys) {
+      const value = searchParams.get(key);
+      if (value !== null) {
+        const numValue = parseFloat(value);
+        if (!isNaN(numValue)) {
+          params[key] = numValue;
+          hasAnyParam = true;
+          console.log(`[QuestionnaireClient] Found param ${key}=${numValue}`);
+        }
+      }
+    }
+
+    // Stocker seulement si au moins un paramètre est présent
+    if (hasAnyParam) {
+      setMatchingTestParams(params);
+      console.log('[QuestionnaireClient] Stored matching test params:', params);
+    } else {
+      console.log('[QuestionnaireClient] No scoring params found in URL');
+    }
+  }, [searchParams, setMatchingTestParams]);
+
   // Traiter les données URL (réponse Q1 pré-remplie depuis le token)
   // Doit s'exécuter AVANT que le questionnaire ne soit rendu
+  const { trackDbEvent } = useDbTracking();
+
   useEffect(() => {
     // Attendre l'hydratation du store
     if (!isHydrated) return;
@@ -136,6 +178,17 @@ export default function QuestionnaireClient({
           timestamp: Date.now(),
         });
 
+        // Tracking DB pour la question pré-remplie
+        // Cela permet de garder une trace du début du parcours même si Q1 est invisible
+        const categoryIdNum = parseInt(initialCategoryId || '0', 10);
+        trackDbEvent('questionnaire', 'question_answer', {
+          question_id: urlData.id_question,
+          question_code: 'Q1',
+          answer_ids: [answerCode],
+          equivalences: equivalence,
+          is_prefilled: true // Flag pour indiquer que c'est une injection via URL
+        }, categoryIdNum, 1); // step_index = 1
+
         console.log('[QuestionnaireClient] URL data applied - Q1 pre-filled:', answerCode);
       }
     } catch (error) {
@@ -144,7 +197,7 @@ export default function QuestionnaireClient({
 
     hasProcessedUrlData.current = true;
     setIsReady(true);
-  }, [isHydrated, initialUrlData, searchParams, dynamicAnswers, setDynamicAnswer]);
+  }, [isHydrated, initialUrlData, searchParams, dynamicAnswers, setDynamicAnswer, trackDbEvent, initialCategoryId, addUserQuestionAnswer]);
 
   const handleComplete = () => {
     // Navigate to profile step with GET params preserved

@@ -208,6 +208,7 @@ const ProfileTypeStep = ({ priorityCountries, otherCountries, onComplete, onBack
 
     switch (selectedType) {
       case "pro_france":
+        data.type_societe   = 1;
         if (showManualCompanyForm) {
           data.countryID   = 1;
           data.companyName = manualCompanyName;
@@ -222,11 +223,13 @@ const ProfileTypeStep = ({ priorityCountries, otherCountries, onComplete, onBack
           data.siren       = selectedCompany?.siren;
           data.siret       = selectedCompany?.siret;
           data.naf         = selectedCompany?.naf;
+          data.address     = selectedCompany?.address;
         }
         info_datalayer = 'pro_france';
         break;
 
       case "creation":
+        data.type_societe   = 4;
         data.country   = creationCountry;
         data.countryID = creationCountryID;
         if (creationCountryID === 1) {
@@ -237,6 +240,7 @@ const ProfileTypeStep = ({ priorityCountries, otherCountries, onComplete, onBack
         break;
 
       case "particulier":
+        data.type_societe   = 3;
         data.country   = particulierCountry;
         data.countryID = particulierCountryID;
         if (particulierCountryID == 1) {
@@ -247,6 +251,7 @@ const ProfileTypeStep = ({ priorityCountries, otherCountries, onComplete, onBack
         break;
 
       case "pro_foreign":
+        data.type_societe   = 2;
         data.companyName = companyName;
         data.country     = country;
         data.countryID   = countryID;

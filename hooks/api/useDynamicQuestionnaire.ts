@@ -16,6 +16,36 @@ const getApiBasePath = () => {
  * Prefetch les caractéristiques en background (non-bloquant)
  * Appelé dès que l'API Qn répond pour avoir les données prêtes
  */
+/**
+ * Prefetch les statistiques de catégorie (nb produits, nb fournisseurs)
+ * Appelé dès le chargement de Q1 pour avoir les données prêtes
+ */
+async function prefetchCategoryStats(
+  categoryId: number,
+  setCategoryStats: (stats: { productsCount: number; suppliersCount: number } | null) => void
+): Promise<void> {
+  try {
+    const apiBase = getApiBasePath();
+    const response = await fetch(`${apiBase}/api/info-categorie/${categoryId}`, {
+      method: 'GET',
+    });
+
+    if (!response.ok) return;
+
+    const data = await response.json();
+    // API retourne: {"id_categorie":"2007702","fournisseur":33,"produit":748}
+    if (data.produit !== undefined && data.fournisseur !== undefined) {
+      setCategoryStats({
+        productsCount: Number(data.produit),
+        suppliersCount: Number(data.fournisseur),
+      });
+    }
+  } catch (error) {
+    console.error('Prefetch category stats error:', error);
+    // En cas d'erreur, on garde null (fallback sur valeurs statiques)
+  }
+}
+
 async function prefetchCharacteristics(
   categoryId: number,
   setCharacteristicsMap: (map: CharacteristicsMap) => void
@@ -140,7 +170,10 @@ export function useDynamicQuestionnaire(rubriqueId: string) {
     characteristicsMap,
     setCharacteristicsMap,
     addUserQuestionAnswer,
+    updateUserQuestionAnswer,
+    userQuestionAnswers,
     setCategoryName,
+    setCategoryStats,
   } = useFlowStore();
 
   const { trackDbEvent } = useDbTracking();
@@ -184,7 +217,12 @@ export function useDynamicQuestionnaire(rubriqueId: string) {
       if (nom_categorie) {
         setCategoryName(nom_categorie);
       }
-      
+
+      // Prefetch category stats (non-bloquant)
+      if (rubriqueId) {
+        prefetchCategoryStats(Number(rubriqueId), setCategoryStats);
+      }
+
       const apiDataAPI : ApiQuestion = apiData;
 
       const dataReturn = {
@@ -251,6 +289,37 @@ export function useDynamicQuestionnaire(rubriqueId: string) {
       prefetchCharacteristics(categoryId, setCharacteristicsMap);
     }
   }, [pathData, categoryId, hasCharacteristics, setCharacteristicsMap]);
+
+  // Mettre à jour Q1 pré-remplie avec les vrais labels une fois les données chargées
+  useEffect(() => {
+    if (!entryData?.entryQuestion) return;
+
+    // Vérifier si Q1 est pré-remplie (existe dans dynamicAnswers)
+    const q1Answers = dynamicAnswers['Q1'];
+    if (!q1Answers || q1Answers.length === 0) return;
+
+    // Vérifier si Q1 existe déjà dans userQuestionAnswers avec un label placeholder
+    const existingQ1 = userQuestionAnswers.find(qa => qa.questionCode === 'Q1');
+    if (!existingQ1 || !existingQ1.questionLabel?.includes('pre-remplie')) return;
+
+    // Récupérer les vrais labels des réponses sélectionnées
+    const selectedAnswers = entryData.entryQuestion.answers.filter(
+      a => q1Answers.includes(a.code)
+    );
+    const answerLabels = selectedAnswers.map(a => a.mainText);
+
+    // Mettre à jour avec les vraies informations
+    updateUserQuestionAnswer('Q1', {
+      questionId: entryData.entryQuestion.id,
+      questionLabel: entryData.entryQuestion.title,
+      answerLabel: answerLabels,
+    });
+
+    console.log('[useDynamicQuestionnaire] Q1 pre-filled updated with real labels:', {
+      questionLabel: entryData.entryQuestion.title,
+      answerLabels
+    });
+  }, [entryData, dynamicAnswers, userQuestionAnswers, updateUserQuestionAnswer]);
 
   // Question courante
   const currentQuestion = useMemo(() => {

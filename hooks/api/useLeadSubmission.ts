@@ -12,6 +12,20 @@ import { trackLeadSubmitted, trackLeadSubmissionError } from '@/lib/analytics/gt
 import { trackGA4LeadSubmitted } from '@/lib/analytics/ga4';
 import { tagHotjarUser, HOTJAR_TAGS } from '@/lib/analytics/hotjar';
 
+interface UserAnswer {
+  questionId: string | number;
+  answerId?: string | string[] | number;
+}
+
+type QAResult = Record<string | number, string | string[] | number>;
+
+function formatUserQuestionAnswers(data: UserAnswer[]): QAResult {
+  return data.reduce<QAResult>((acc, { questionId, answerId }) => {
+    if (answerId !== undefined) acc[questionId] = answerId;
+    return acc;
+  }, {});
+}
+
 /**
  * Convertit le ProfileType vers StatutAcheteur pour le PHP
  */
@@ -22,7 +36,7 @@ function profileTypeToStatut(profileType: ProfileType): StatutAcheteur {
     case 'creation':
       return '4'; // Création d'entreprise
     case 'pro_foreign':
-      return '6'; // Professionnel étranger
+      return '1'; // Professionnel étranger
     case 'particulier':
       return '7'; // Particulier
     default:
@@ -103,7 +117,8 @@ export function useLeadSubmission(options: UseLeadSubmissionOptions = {}) {
   const { suppliers = [] } = options;
 
   // Récupérer les réponses Q/R de l'utilisateur depuis le flow store
-  const userQuestionAnswers        = useFlowStore.getState().userQuestionAnswers || [];
+  const userQuestionAnswers        = formatUserQuestionAnswers(useFlowStore.getState().userQuestionAnswers) || [];
+
   const equivalenceCaracteristique = useFlowStore.getState().equivalenceCaracteristique || [];
   const ddc                        = useFlowStore.getState().ddc || '';
 
@@ -113,23 +128,26 @@ export function useLeadSubmission(options: UseLeadSubmissionOptions = {}) {
       const payload: DemandeInfoPayload = {
         form_ab: 'form_ux_matching',
         acheteur: {
-          civilite      : data.contact.civility || '',
-          nom           : data.contact.lastName,
-          prenom        : data.contact.firstName,
-          mail          : data.contact.email,
-          isKnown       : data.contact.isKnown ? '1'                                                          : '0',
-          telephone     : data.contact.phone,
-          indicatif_tel : data.contact.countryCode || '+33',
-          societe       : data.contact.company || data.profile.company?.name || data.profile.companyName || '',
-          id_siret_insee: data.profile.siret || '',
-          code_postal   : data.profile.postalCode || '',
-          ville         : data.profile.city || '',
-          pays          : data.profile.countryID || 1,                                                                // 1 = France par défaut
-          statut        : profileTypeToStatut(data.profile.type),
-          naf           : data.profile.naf || '',
-          id_pays_tel   : data.contact.id_pays_tel || 1,
+          civilite           : data.contact.civility || '',
+          nom                : data.contact.lastName,
+          prenom             : data.contact.firstName,
+          mail               : data.contact.email,
+          isKnown            : data.contact.isKnown ? '1'                                                          : '0',
+          telephone          : data.contact.phone,
+          indicatif_tel      : data.contact.countryCode || '+33',
+          societe            : data.contact.company || data.profile.company?.name || data.profile.companyName || '',
+          id_siret_insee     : data.profile.siret || '',
+          code_postal        : data.profile.postalCode || '',
+          ville              : data.profile.city || '',
+          pays               : data.profile.countryID || 1,                                                                // 1 = France par défaut
+          statut             : profileTypeToStatut(data.profile.type),
+          naf                : data.profile.naf || '',
+          id_pays_tel        : data.contact.id_pays_tel || 1,
+          id_societe_acheteur: data.contact.isKnown ? data.contact.id_acheteur                                     : 0,
+          address            : data.profile.address || '',
+          type_societe       : data.profile.type_societe || '',
         },
-        message               : data.contact.message || 'Demande de devis via UX Matching',
+        message               : data.contact.message || '',
         produits              : data.source === 2 ? suppliersToProduitsSelection(data.selectedSupplierIds, suppliers, data): [],
         criteres              : data.answers,
         souhait_devis         : data.source === 2,
@@ -139,7 +157,7 @@ export function useLeadSubmission(options: UseLeadSubmissionOptions = {}) {
         info_acheteur_matching: construireTabMatchingAcheteur({ values: data }),
         ddc_is_i              : ddc,
         // JSON stringifié des questions/réponses utilisateur (debug / tracking)
-        question_reponse_acheteur: userQuestionAnswers.length > 0 ? JSON.stringify(userQuestionAnswers) : undefined,
+        question_reponse_acheteur: userQuestionAnswers ? JSON.stringify(userQuestionAnswers) : undefined,
         caracteristiques: equivalenceCaracteristique.length > 0 ? JSON.stringify(equivalenceCaracteristique.map(
           function (o) {
             return {
@@ -166,10 +184,19 @@ export function useLeadSubmission(options: UseLeadSubmissionOptions = {}) {
       const redirectUrl = successfulResults.find(r => r.redirect_url)?.redirect_url;
       const leadId = successfulResults.find(r => r.id_demande)?.id_demande || `lead_${Date.now()}`;
 
+      // Vérifier si c'est une vraie URL externe (succès) ou pas (erreur PHP)
+      const isExternalRedirect = redirectUrl?.startsWith('http') ?? false;
+
+      // URL de fallback vers la page catégorie si erreur
+      const categoryId = data.categoryId || '0';
+      const fallbackUrl = `https://www.hellopro.fr/-${categoryId}-fr-1-feuille.html`;
+
       return {
         data: {
           leadId,
-          redirectUrl: redirectUrl || '/confirmation',
+          redirectUrl: isExternalRedirect ? redirectUrl : null,
+          isExternalRedirect,
+          fallbackUrl,
           totalSent: successfulResults.length,
           totalRequested: data.selectedSupplierIds.length,
         },
@@ -194,17 +221,13 @@ export function useLeadSubmission(options: UseLeadSubmissionOptions = {}) {
         tagHotjarUser(HOTJAR_TAGS.CONVERTED);
       }
 
-      // Navigate to confirmation page (avec conservation des paramètres GET)
-      if (response.data?.redirectUrl) {
-        const url = response.data.redirectUrl;
-        // Si c'est une URL relative interne, conserver les paramètres GET
-        if (url.startsWith('/')) {
-          navigateTo(url);
-        } else {
-          // URL externe (redirection PHP) : naviguer directement
-          window.location.href = url;
-        }
+      // Redirection uniquement si URL externe (succès PHP)
+      // Si pas d'URL externe, les formulaires gèrent l'affichage du message d'erreur
+      if (response.data?.isExternalRedirect && response.data?.redirectUrl) {
+        window.location.href = response.data.redirectUrl;
       }
+      // Si isExternalRedirect === false, les formulaires afficheront le message d'erreur
+      // et redirigeront vers fallbackUrl après 2 secondes
     },
     onError: (error) => {
       // Track submission error

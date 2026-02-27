@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from "react";
-import { Check, CheckCircle, AlertTriangle, ShieldCheck, HelpCircle } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Check, CheckCircle, AlertTriangle, ShieldCheck, HelpCircle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getProductImageUrl } from "@/lib/utils/image-url";
 import type { ProductSpec, PriceInfo } from "@/types";
 
 interface SupplierCardProps {
@@ -23,6 +24,7 @@ interface SupplierCardProps {
   matchGaps?: string[];
   viewMode?: "grid" | "list";
   price?: PriceInfo;
+  priceLabel?: string;
 }
 
 // Format price with French locale
@@ -34,7 +36,16 @@ const formatPrice = (amount: number): string => {
 };
 
 // Price display component
-const PriceDisplay = ({ price }: { price?: PriceInfo }) => {
+const PriceDisplay = ({ price, priceLabel }: { price?: PriceInfo; priceLabel?: string }) => {
+  // Priorité au prix brut retourné par l'API
+  if (priceLabel) {
+    return (
+      <span className="text-sm font-semibold text-foreground">
+        {priceLabel}
+      </span>
+    );
+  }
+
   if (!price || price.amount === undefined || price.amount === null) {
     return (
       <span className="text-muted-foreground text-sm">
@@ -73,10 +84,14 @@ const SupplierCard = ({
   matchGaps = [],
   viewMode = "grid",
   price,
+  priceLabel,
 }: SupplierCardProps) => {
   const [imageError, setImageError] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
-  
+
+  // Transform image URL via proxy
+  const imageUrl = useMemo(() => getProductImageUrl(image), [image]);
+
   const getMatchBadgeStyle = () => {
     if (matchScore >= 80) return "bg-match-high text-white";
     if (matchScore >= 60) return "bg-match-medium text-white";
@@ -119,12 +134,18 @@ const SupplierCard = ({
     >
       {/* Image */}
       <div className="relative w-24 h-24 flex-shrink-0 overflow-hidden bg-muted">
-        {!imageError && image ? (
+        {!imageLoaded && !imageError && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
+          </div>
+        )}
+        {!imageError && imageUrl ? (
           <img
-            src={image}
+            src={imageUrl}
             alt={productName}
+            loading="lazy"
             className={cn(
-              "h-full w-full object-cover transition-opacity duration-300",
+              "h-full w-full object-contain transition-opacity duration-300",
               imageLoaded ? "opacity-100" : "opacity-0"
             )}
             onLoad={() => setImageLoaded(true)}
@@ -167,7 +188,7 @@ const SupplierCard = ({
           </div>
         </div>
         <div className="flex items-center justify-between mt-2">
-          <PriceDisplay price={price} />
+          <PriceDisplay price={price} priceLabel={priceLabel} />
         </div>
       </div>
 
@@ -234,12 +255,18 @@ const SupplierCard = ({
 
       {/* Product Image - Fixed height */}
       <div className="relative h-32 sm:h-36 w-full overflow-hidden bg-muted flex-shrink-0">
-        {!imageError && image ? (
+        {!imageLoaded && !imageError && (
+          <div className="absolute inset-0 flex items-center justify-center z-10">
+            <Loader2 className="h-6 w-6 text-muted-foreground animate-spin" />
+          </div>
+        )}
+        {!imageError && imageUrl ? (
           <img
-            src={image}
+            src={imageUrl}
             alt={productName}
+            loading="lazy"
             className={cn(
-              "h-full w-full object-cover transition-transform duration-300 group-hover:scale-105 transition-opacity",
+              "h-full w-full object-contain transition-transform duration-300 group-hover:scale-105 transition-opacity",
               imageLoaded ? "opacity-100" : "opacity-0"
             )}
             onLoad={() => setImageLoaded(true)}
@@ -269,7 +296,7 @@ const SupplierCard = ({
 
         {/* Price - Fixed height */}
         <div className="h-6 mb-3 flex items-center">
-          <PriceDisplay price={price} />
+          <PriceDisplay price={price} priceLabel={priceLabel} />
         </div>
 
         {/* Criteria Match - Prominent display */}

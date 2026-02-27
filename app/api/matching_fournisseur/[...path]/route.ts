@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 const BASE_URL = 'https://api.hellopro.eu';
-const URL_API_FOURNISSEUR = `${BASE_URL}/graphdebug-service/fournisseur`;
+const URL_API_FOURNISSEUR = `${BASE_URL}/graph-service/fournisseur`;
 
 /**
  * GET /api/matching_fournisseur/[...path]
@@ -19,7 +19,7 @@ export async function GET(
     const pathString = path.join('/');
     const targetUrl = `${URL_API_FOURNISSEUR}/${pathString}`;
 
-    console.log('[matching_fournisseur] GET:', targetUrl);
+    //console.log('[matching_fournisseur] GET:', targetUrl);
 
     const response = await fetch(targetUrl, {
       method: 'GET',
@@ -63,7 +63,7 @@ export async function POST(
     const targetUrl = `${URL_API_FOURNISSEUR}/${pathString}`;
     const body = await request.json();
 
-    console.log('[matching_fournisseur] POST:', targetUrl, body);
+    //console.log('[matching_fournisseur] POST:', targetUrl, body);
 
     const response = await fetch(targetUrl, {
       method: 'POST',

@@ -37,16 +37,18 @@ export interface CompanyResult {
 }
 
 export interface ProfileData {
-  type        : ProfileType;
-  company    ?: CompanyResult;
-  companyName?: string;
-  postalCode ?: string;
-  city       ?: string;
-  country    ?: string;
-  siren      ?: string;
-  siret      ?: string;
-  countryID  ?: number;
-  naf        ?: string;
+  type         : ProfileType;
+  company     ?: CompanyResult;
+  companyName ?: string;
+  postalCode  ?: string;
+  city        ?: string;
+  country     ?: string;
+  siren       ?: string;
+  siret       ?: string;
+  countryID   ?: number;
+  naf         ?: string;
+  address     ?: string;
+  type_societe?: number | string;
 }
 
 export interface PostalCodeCity {
@@ -58,6 +60,8 @@ export interface PostalCodeCity {
 // SUPPLIER & PRODUCT TYPES
 // ========================================
 export interface ProductSpec {
+  /** ID de la caractéristique (pour filtrage des critères supprimés) */
+  id_caracteristique?: number;
   label: string;
   value: string;
   matches?: boolean;
@@ -109,6 +113,7 @@ export interface Supplier {
   specs: ProductSpec[];
   supplier: SupplierInfo;
   price?: PriceInfo;
+  priceLabel?: string;  // Prix brut retourné par l'API (ex: "699,00 € HT")
   debugInfo?: {
     coeff_geo: number;
     coeff_type_frns: number;
@@ -139,6 +144,7 @@ export interface ContactFormData {
   phone: string;
   message?: string;
   files?: File[];  // Pièces jointes (PJ)
+  id_acheteur?: string;  // ID de l'acheteur si le mail est connu
 }
 
 export interface LeadSubmission {

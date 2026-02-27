@@ -1,6 +1,7 @@
 'use client';
 
 import { Check, X, Phone } from "lucide-react";
+import Image from "next/image";
 import { cn, getAssetPath } from "@/lib/utils";
 const hpLogo = getAssetPath("/images/hp-logo.svg");
 const expertPhoto = getAssetPath("/images/expert-patrick.jpg");
@@ -22,12 +23,12 @@ const ProgressHeader = ({ steps, currentStep, progress }: ProgressHeaderProps) =
   return (
     <div className="border-b border-border bg-card">
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 sm:px-6 sm:py-4">
+      <div className="flex items-center justify-between px-3 py-2 lg:px-6 lg:py-4">
         {/* Logo */}
-        <img src={hpLogo} alt="Hellopro" className="h-5 sm:h-8 shrink-0" />
+        <Image src={hpLogo} alt="Hellopro" width={120} height={32} className="h-5 lg:h-8 w-auto shrink-0" />
 
-        {/* Mobile: Current step indicator - simplified */}
-        <div className="flex sm:hidden items-center gap-1.5">
+        {/* Mobile/Tablet: Current step indicator - simplified */}
+        <div className="flex lg:hidden items-center gap-1.5">
           <span className="text-xs font-medium text-muted-foreground">
             Étape {currentStep}/{steps.length}
           </span>
@@ -37,7 +38,7 @@ const ProgressHeader = ({ steps, currentStep, progress }: ProgressHeaderProps) =
         </div>
 
         {/* Desktop: Full steps */}
-        <div className="hidden sm:flex items-center gap-6">
+        <div className="hidden lg:flex items-center gap-6">
           {steps.map((step, index) => (
             <div key={step.id} className="flex items-center gap-2">
               <div
@@ -75,26 +76,30 @@ const ProgressHeader = ({ steps, currentStep, progress }: ProgressHeaderProps) =
 
         {/* Expert help - desktop */}
         <a
-          href="tel:+33123456789"
-          className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          href="tel:+33745882953"
+          className="hidden lg:flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
-          <img
+          <Image
             src={expertPhoto}
             alt="Patrick Duval"
+            width={28}
+            height={28}
             className="h-7 w-7 rounded-full object-cover ring-1 ring-border"
           />
           <span className="text-xs">Besoin d'aide ?</span>
-          <span className="font-medium text-foreground">01 23 45 67 89</span>
+          <span className="font-medium text-foreground">07 45 88 29 53</span>
         </a>
 
-        {/* Expert help - mobile (icon only) */}
+        {/* Expert help - mobile/tablet (icon only) */}
         <a
-          href="tel:+33123456789"
-          className="sm:hidden flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
+          href="tel:+33745882953"
+          className="lg:hidden flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
         >
-          <img
+          <Image
             src={expertPhoto}
             alt="Patrick Duval"
+            width={24}
+            height={24}
             className="h-6 w-6 rounded-full object-cover ring-1 ring-border"
           />
           <Phone className="h-4 w-4 text-primary" />

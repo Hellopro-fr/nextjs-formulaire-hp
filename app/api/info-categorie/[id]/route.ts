@@ -1,37 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 const BASE_URL = process.env.HELLOPRO_API_URL || 'https://api.hellopro.fr';
-const URL_API = `${BASE_URL}/v2/index.php`;
-const TOKEN = process.env.NEXT_TOKEN_API_QUESTION || '';
+const TOKEN = process.env.TOKEN_INFO_PRODUIT || '';
 
-export async function POST(request: NextRequest) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const body = await request.formData();
-    const categoryId = body.get('id_categorie');
+    const { id } = await params;
 
-    if (!categoryId) {
+    if (!id) {
       return NextResponse.json(
         { error: 'id_categorie required' },
         { status: 400 }
       );
     }
 
-    const payload = {
-      etape: "caracteristique",
-      field: "final",
-      action: "get",
-      data: {
-        id_categorie: categoryId.toString()
-      }
-    };
+    const url = `${BASE_URL}/hp/info-categorie/${id}`;
 
-    const response = await fetch(URL_API, {
-      method: 'POST',
+    const response = await fetch(url, {
+      method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${TOKEN}`
+        'Authorization': `Bearer ${TOKEN}`,
       },
-      body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
@@ -45,7 +38,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(data, { status: 200 });
   } catch (error) {
-    console.error('Caracteristiques proxy error:', error);
+    console.error('Info categorie proxy error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

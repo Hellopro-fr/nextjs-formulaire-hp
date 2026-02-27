@@ -57,6 +57,27 @@ const ContactForm = ({ selectedSuppliers, onBack }: ContactFormProps) => {
   const [errors, setErrors] = useState<Partial<Record<keyof ContactFormData, string>>>({});
   const [files, setFiles] = useState<File[]>([]);
   const [showAdditionalFields, setShowAdditionalFields] = useState<boolean>(false);
+  const [showFallbackRedirect, setShowFallbackRedirect] = useState<boolean>(false);
+  const fallbackMessageRef = useRef<HTMLParagraphElement>(null);
+
+  // Gérer la redirection fallback si l'API ne retourne pas une URL externe
+  useEffect(() => {
+    if (leadSubmission.isSuccess && leadSubmission.data?.data) {
+      const { isExternalRedirect, fallbackUrl } = leadSubmission.data.data;
+      if (!isExternalRedirect && fallbackUrl) {
+        // Afficher le message d'erreur et rediriger après 2 secondes
+        setShowFallbackRedirect(true);
+        // Scroll vers le message après un court délai pour laisser le rendu se faire
+        setTimeout(() => {
+          fallbackMessageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
+        const timer = setTimeout(() => {
+          window.location.href = fallbackUrl;
+        }, 2000);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [leadSubmission.isSuccess, leadSubmission.data]);
 
   // Ref pour éviter les doubles appels en StrictMode
   const hasTrackedView = useRef(false);
@@ -102,6 +123,7 @@ const ContactForm = ({ selectedSuppliers, onBack }: ContactFormProps) => {
         lastName : info.nom || "",
         phone    : info.tel || "",
         civility: info.cv || "",
+        id_acheteur: info.id || undefined,
       };
             
     }else{
@@ -114,6 +136,7 @@ const ContactForm = ({ selectedSuppliers, onBack }: ContactFormProps) => {
         phone      : "",
         countryCode: formData.countryCode || "+33",
         id_pays_tel: formData.id_pays_tel || 1,
+        id_acheteur: undefined,
       };
     }
 
@@ -328,12 +351,6 @@ const ContactForm = ({ selectedSuppliers, onBack }: ContactFormProps) => {
                 <span>Nous vous avons reconnu ! Vos informations sont pré-enregistrées.</span>
               </div>
             )}
-            {isExistingBuyer && buyerCheckResult?.message && (
-              <div className="mt-2 flex items-center gap-2 text-sm text-orange-600">
-                <Shield className="h-4 w-4" />
-                <span>{buyerCheckResult.message}</span>
-              </div>
-            )}
             {errors.email && <p className="mt-1 text-sm text-destructive">{errors.email}</p>}
           </div>
 
@@ -505,10 +522,10 @@ const ContactForm = ({ selectedSuppliers, onBack }: ContactFormProps) => {
           {/* Submit button */}
           <button
             type="submit"
-            disabled={leadSubmission.isPending}
+            disabled={leadSubmission.isPending || leadSubmission.isSuccess}
             className="w-full rounded-xl bg-accent py-4 text-lg font-semibold text-accent-foreground hover:bg-accent/90 shadow-lg shadow-accent/25 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {leadSubmission.isPending ? (
+            {(leadSubmission.isPending || leadSubmission.isSuccess) ? (
               <>
                 <div className="h-5 w-5 animate-spin rounded-full border-2 border-accent-foreground border-t-transparent" />
                 Envoi en cours...
@@ -523,7 +540,13 @@ const ContactForm = ({ selectedSuppliers, onBack }: ContactFormProps) => {
 
           {leadSubmission.isError && (
             <p className="text-center text-sm text-destructive">
-              Une erreur est survenue. Veuillez réessayer.
+              Une erreur est survenue. Veuillez réessayer plus tard.
+            </p>
+          )}
+
+          {showFallbackRedirect && (
+            <p ref={fallbackMessageRef} className="text-center text-sm text-destructive">
+              Une erreur est survenue. Vous allez être redirigé vers la catégorie.
             </p>
           )}
         </form>

@@ -52,9 +52,30 @@ const CustomNeedForm = ({ onBack }: CustomNeedFormProps) => {
 
 
   const [errors, setErrors] = useState<Partial<Record<keyof typeof formData, string>>>({});
-  const [files, setFiles] = useState<File[]>([]);   
+  const [files, setFiles] = useState<File[]>([]);
+  const [showFallbackRedirect, setShowFallbackRedirect] = useState<boolean>(false);
+  const fallbackMessageRef = useRef<HTMLParagraphElement>(null);
 
   const leadSubmission = useLeadSubmission();
+
+  // Gérer la redirection fallback si l'API ne retourne pas une URL externe
+  useEffect(() => {
+    if (leadSubmission.isSuccess && leadSubmission.data?.data) {
+      const { isExternalRedirect, fallbackUrl } = leadSubmission.data.data;
+      if (!isExternalRedirect && fallbackUrl) {
+        // Afficher le message d'erreur et rediriger après 2 secondes
+        setShowFallbackRedirect(true);
+        // Scroll vers le message après un court délai pour laisser le rendu se faire
+        setTimeout(() => {
+          fallbackMessageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
+        const timer = setTimeout(() => {
+          window.location.href = fallbackUrl;
+        }, 2000);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [leadSubmission.isSuccess, leadSubmission.data]);
   const { trackDbEvent } = useDbTracking();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
@@ -92,6 +113,7 @@ const CustomNeedForm = ({ onBack }: CustomNeedFormProps) => {
         lastName: info.nom || "",
         phone: info.tel || "",
         civility: info.cv || "",
+        id_acheteur: info.id || undefined,
       };
 
     } else {
@@ -104,6 +126,7 @@ const CustomNeedForm = ({ onBack }: CustomNeedFormProps) => {
         phone: "",
         countryCode: formData.countryCode || "+33",
         id_pays_tel: formData.id_pays_tel || 1,
+        id_acheteur: undefined,
       };
     }
 
@@ -494,12 +517,6 @@ const CustomNeedForm = ({ onBack }: CustomNeedFormProps) => {
                     <span>Nous vous avons reconnu ! Vos informations sont pré-enregistrées.</span>
                   </div>
                 )}
-                {isExistingBuyer && buyerCheckResult?.message && (
-                  <div className="mt-2 flex items-center gap-2 text-sm text-orange-600">
-                    <Shield className="h-4 w-4" />
-                    <span>{buyerCheckResult.message}</span>
-                  </div>
-                )}
               </div>
 
               {/* Additional fields - only shown if email is valid and not existing buyer */}
@@ -598,12 +615,33 @@ const CustomNeedForm = ({ onBack }: CustomNeedFormProps) => {
               {/* Submit button */}
               <button
                 type="submit"
-                disabled={!isFormValid}
+                disabled={!isFormValid || leadSubmission.isPending || leadSubmission.isSuccess}
                 className="w-full rounded-xl bg-accent py-4 text-lg font-semibold text-accent-foreground hover:bg-accent/90 shadow-lg shadow-accent/25 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Send className="h-5 w-5" />
-                Envoyer ma demande
+                {(leadSubmission.isPending || leadSubmission.isSuccess) ? (
+                  <>
+                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-accent-foreground border-t-transparent" />
+                    Envoi en cours...
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-5 w-5" />
+                    Envoyer ma demande
+                  </>
+                )}
               </button>
+
+              {leadSubmission.isError && (
+                <p className="text-center text-sm text-destructive">
+                  Une erreur est survenue. Veuillez réessayer plus tard.
+                </p>
+              )}
+
+              {showFallbackRedirect && (
+                <p ref={fallbackMessageRef} className="text-center text-sm text-destructive">
+                  Une erreur est survenue. Vous allez être redirigé vers la catégorie.
+                </p>
+              )}
             </form>
           </>
         )}

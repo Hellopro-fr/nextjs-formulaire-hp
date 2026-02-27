@@ -6,6 +6,7 @@ import type { Supplier, ProductSpec } from '@/types';
 import type { CharacteristicsMap } from '@/types/characteristics';
 import type { MatchingProduct, MatchingCharacteristic, ProductInfoItem } from '@/types/matching';
 import type { ConsolidatedCharacteristic } from './equivalence-merger';
+import { fixBrokenEncoding } from './fix-encoding';
 
 // =============================================================================
 // CONSTANTS
@@ -161,6 +162,7 @@ function buildProductSpecs(
       if (matchingChar.statut_matching === 4) {
         const expected = getExpectedValue(characteristicsMap, equivalences, equivalence.id_caracteristique);
         return {
+          id_caracteristique: equivalence.id_caracteristique,
           label,
           value: 'Non renseigné',
           matches: undefined, // ni true ni false pour non renseigné
@@ -180,6 +182,7 @@ function buildProductSpecs(
         : undefined;
 
       return {
+        id_caracteristique: equivalence.id_caracteristique,
         label,
         value,
         matches,
@@ -192,6 +195,7 @@ function buildProductSpecs(
       const expected = getExpectedValue(characteristicsMap, equivalences, equivalence.id_caracteristique);
 
       return {
+        id_caracteristique: equivalence.id_caracteristique,
         label,
         value: 'Non renseigné',
         matches: undefined, // ni true ni false pour non renseigné
@@ -364,21 +368,27 @@ export function enrichSuppliersWithProductInfo(
         ? vendeur.domaine.replace(/^www\./, '').split('.')[0].toUpperCase()
         : PLACEHOLDER_SUPPLIER);
 
-    // Image du produit (peut contenir plusieurs URLs séparées par <br> ou \n)
+    // Image du produit - peut être un tableau ou une string avec séparateurs
     let images: string[] = [];
     let mainImage = PLACEHOLDER_IMAGE;
 
     if (produit.image_produit) {
-      // Nettoyer et séparer les URLs
-      images = produit.image_produit
-        .split(/<br\s*\/?>|\n/i) // Séparer par <br>, <br/>, <br /> ou saut de ligne
-        .map(url => url.trim())
-        .filter(url => url.length > 0 && url.startsWith('http'));
+      // Nouveau format: tableau de chemins relatifs
+      if (Array.isArray(produit.image_produit)) {
+        images = produit.image_produit
+          .map((path: string) => path.trim())
+          .filter((path: string) => path.length > 0);
+      } else {
+        // Ancien format: string avec URLs séparées par <br> ou \n
+        images = produit.image_produit
+          .split(/<br\s*\/?>|\n/i)
+          .map((url: string) => url.trim())
+          .filter((url: string) => url.length > 0);
+      }
 
       if (images.length > 0) {
         mainImage = images[0];
       } else {
-        // Fallback si aucune URL valide trouvée après split
         images = [PLACEHOLDER_IMAGE];
       }
     } else {
@@ -389,21 +399,22 @@ export function enrichSuppliersWithProductInfo(
         
     return {
       ...supplier,
-      productName: produit.titre_produit || supplier.productName,
+      productName: fixBrokenEncoding(produit.titre_produit) || supplier.productName,
       supplierName,
       description: '', // On n'utilise pas la description HTML brute
-      descriptionHtml: produit.description_produit || undefined,
+      descriptionHtml: fixBrokenEncoding(produit.description_produit) || undefined,
       image: mainImage,
       images: images,
       logo: vendeur.logo || undefined,
       supplier: {
         id: vendeur.id,
         name: supplierName,
-        description: vendeur.short_description || '',
+        description: fixBrokenEncoding(vendeur.short_description) || '',
         location: vendeur.adresse || '',
         responseTime,
         logo: vendeur.logo,
       },
+      priceLabel: produit.prix_produit || undefined,
     };
   });
 }

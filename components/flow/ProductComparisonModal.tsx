@@ -2,8 +2,10 @@
 
 import { X, Check, Plus, Minus, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import type { ProductSpec, Supplier } from "@/types";
+import { useFlowStore } from "@/lib/stores/flow-store";
+import { getProductImageUrl } from "@/lib/utils/image-url";
 
 interface ProductComparisonModalProps {
   products: Supplier[];
@@ -20,14 +22,26 @@ const ProductComparisonModal = ({
 }: ProductComparisonModalProps) => {
   const [currentProductIndex, setCurrentProductIndex] = useState(0);
 
+  // Récupérer les IDs des critères supprimés depuis le store
+  const { removedCritiqueCriteriaIds, removedSecondaireCriteriaIds } = useFlowStore();
+
+  // Créer un Set des IDs supprimés pour filtrage rapide
+  const removedIdsSet = useMemo(
+    () => new Set([...removedCritiqueCriteriaIds, ...removedSecondaireCriteriaIds]),
+    [removedCritiqueCriteriaIds, removedSecondaireCriteriaIds]
+  );
+
   // Collecter tous les labels uniques des critères demandés (isRequested: true)
-  const allSpecLabels = Array.from(
+  // en excluant les critères supprimés
+  const allSpecLabels: string[] = useMemo(() => Array.from(
     new Set(
       products.flatMap((p) =>
-        p.specs.filter((s) => s.isRequested).map((s) => s.label)
+        p.specs
+          .filter((s) => s.isRequested && (!s.id_caracteristique || !removedIdsSet.has(s.id_caracteristique)))
+          .map((s) => s.label)
       )
     )
-  );
+  ), [products, removedIdsSet]);
 
   const getSpecValue = (product: Supplier, label: string) => {
     const spec = product.specs.find((s) => s.label === label);
@@ -51,9 +65,10 @@ const ProductComparisonModal = ({
       <div className="flex flex-col items-center gap-3 rounded-xl bg-card border border-border p-4">
         <div className="h-24 w-24 overflow-hidden rounded-lg bg-muted">
           <img
-            src={product.image}
+            src={getProductImageUrl(product.image)}
             alt={product.productName}
-            className="h-full w-full object-cover"
+            loading="lazy"
+            className="h-full w-full object-contain"
           />
         </div>
         <div className="text-center">
@@ -226,13 +241,14 @@ const ProductComparisonModal = ({
       </div>
 
       {/* Desktop view - Table */}
-      <div className="hidden md:block flex-1 overflow-auto p-6">
-        <div className="overflow-x-auto">
+      <div className="hidden md:flex flex-1 flex-col overflow-hidden p-6">
+        {/* Table container avec scrollbars natifs */}
+        <div className="flex-1 overflow-x-auto overflow-y-auto relative">
           <table className="w-full border-collapse">
-            <thead>
+            <thead className="sticky top-0 z-20">
               <tr>
                 {/* Fixed column header */}
-                <th className="sticky left-0 z-10 bg-card border-b-2 border-r border-border p-4 text-left text-sm font-semibold text-muted-foreground min-w-[180px]">
+                <th className="sticky left-0 z-30 bg-card border-b-2 border-r border-border p-4 text-left text-sm font-semibold text-muted-foreground min-w-[180px]">
                   Caractéristiques
                 </th>
                 {/* Product headers */}
@@ -240,17 +256,18 @@ const ProductComparisonModal = ({
                   <th
                     key={product.id}
                     className={cn(
-                      "border-b-2 border-border p-4 min-w-[200px] text-center",
-                      selectedIds.has(product.id) && "bg-primary/5"
+                      "border-b-2 border-border p-4 min-w-[200px] text-center bg-card relative",
+                      selectedIds.has(product.id) && "before:absolute before:inset-0 before:bg-primary/5 before:pointer-events-none"
                     )}
                   >
                     <div className="flex flex-col items-center gap-3">
                       {/* Product image */}
                       <div className="h-20 w-20 overflow-hidden rounded-lg bg-muted">
                         <img
-                          src={product.image}
+                          src={getProductImageUrl(product.image)}
                           alt={product.productName}
-                          className="h-full w-full object-cover"
+                          loading="lazy"
+                          className="h-full w-full object-contain"
                         />
                       </div>
                       {/* Product name */}

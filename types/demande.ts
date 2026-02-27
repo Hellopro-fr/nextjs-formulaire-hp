@@ -43,10 +43,11 @@ export interface AcheteurData {
   id_cartegie?: string;
 
   // Adresse
-  adresse?: string;
+  address?: string;
   code_postal: string;
   ville: string;
   pays: number;
+  type_societe: number | string;
 
   // Profil
   statut: StatutAcheteur;
@@ -59,6 +60,8 @@ export interface AcheteurData {
   website?: string;
   reception_alerte?: boolean;
   naf?: string;
+
+  id_societe_acheteur ?: string | number;
 }
 
 /**

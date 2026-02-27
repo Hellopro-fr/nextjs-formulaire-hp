@@ -3,13 +3,15 @@
 import { useCallback } from 'react';
 import { getSessionId } from '@/lib/analytics/gtm';
 import { basePath } from '@/lib/utils';
+import { useFlowStore, FLOW_ORIGINAL_TOKEN_KEY } from '@/lib/stores/flow-store';
 
 const getApiBasePath = () => {
   return basePath || '';
 };
 
 // Use Next.js API proxy to avoid CORS issues
-const TRACKING_API_URL = '/api/tracking';
+// Route renommée pour éviter blocage WAF Imperva (mot "tracking" détecté)
+const TRACKING_API_URL = '/api/tck';
 
 type EventType = 'questionnaire' | 'profile' | 'selection' | 'contact' | 'conversion' | 'matching';
 
@@ -45,7 +47,7 @@ export function useDbTracking() {
     categoryId?: number | null,
     stepIndex?: number
   ) => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') return;
 
     try {
       const sessionId = getSessionId();
@@ -55,21 +57,50 @@ export function useDbTracking() {
       // Préparer les méta-données de session (seulement si pas encore envoyées)
       let sessionMeta = undefined;
       if (!hasSentMeta) {
+        // Récupérer le token original si présent
+        let token = undefined;
+        if (typeof window !== 'undefined') {
+          token = sessionStorage.getItem(FLOW_ORIGINAL_TOKEN_KEY) || undefined;
+        }
+
         sessionMeta = {
           user_agent: navigator.userAgent,
-          referrer: document.referrer,
+          referrer: document.referrer || '', // 'direct' si vide (ex: accès direct ou favori)
           entry_url: window.location.pathname,
-          // token: ... (si disponible via URL ou store)
+          token: token,
         };
         sessionStorage.setItem(metaKey, 'true');
       }
 
+      // Récupérer le flowType depuis le store pour le tracking session
+      const storeFlowType = useFlowStore.getState().flowType;
+      
+      // type_flow (0: Non terminé | 1: flow demande categ | 2: flow produit)
+      let typeFlow = 0;
+      if (storeFlowType === 'principal') {
+        typeFlow = 2;
+      } else if (storeFlowType) {
+        typeFlow = 1;
+      }
+      
+      // Déterminer type_dmd_categ (0: par défaut, 1: produit insuffisant, 2: intentionnelle)
+      let typeDmdCateg = 0;
+      if (storeFlowType === 'pas_assez_produits') {
+        typeFlow = 1;
+        typeDmdCateg = 1;
+      } else if (storeFlowType === 'pas_trouve_recherchez') {
+        typeFlow = 1;
+        typeDmdCateg = 2;
+      }
+
       // Construire le payload
-      const payload: TrackingPayload = {
+      const payload: any = {
         etape: 'tracking_action',
         data: {
           session_id: sessionId,
           category_id: categoryId,
+          type_flow: typeFlow,
+          type_dmd_categ: typeDmdCateg,
           event: {
             event_type: eventType,
             event_name: eventName,

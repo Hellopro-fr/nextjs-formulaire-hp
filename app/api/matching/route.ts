@@ -7,11 +7,13 @@ const URL_API_MATCHING = `${BASE_URL}/graph-service/produits/matching`;
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.formData();
-    const id_categorie = body.get('id_categorie');
-    const top_k = body.get('top_k');
+    const body                    = await request.formData();
+    const id_categorie            = body.get('id_categorie');
+    const top_k                   = body.get('top_k');
+    const champs_sortie           = body.get('champs_sortie');
     const metadonnee_utilisateurs = body.get('metadonnee_utilisateurs');
-    const liste_caracteristique = body.get('liste_caracteristique');
+    const liste_caracteristique   = body.get('liste_caracteristique');
+    const scoring    = body.get('scoring');
 
     if (!id_categorie) {
       return NextResponse.json(
@@ -20,20 +22,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const url = new URL(URL_API_MATCHING);
-    
     // Reconstruction du payload avec les bons types
-    const payload = {
+    const payload: Record<string, any> = {
       id_categorie: Number(id_categorie), // Conversion en nombre si nécessaire
       top_k: Number(top_k) || 12,        // Conversion en nombre
-      // On parse les chaînes JSON pour les transformer en vrais objets/tableaux JS
-      metadonnee_utilisateurs: metadonnee_utilisateurs 
-        ? JSON.parse(metadonnee_utilisateurs.toString()) 
+      champs_sortie : champs_sortie
+        ? JSON.parse(champs_sortie.toString())
         : {},
-      liste_caracteristique: liste_caracteristique 
-        ? JSON.parse(liste_caracteristique.toString()) 
+      // On parse les chaînes JSON pour les transformer en vrais objets/tableaux JS
+      metadonnee_utilisateurs: metadonnee_utilisateurs
+        ? JSON.parse(metadonnee_utilisateurs.toString())
+        : {},
+      liste_caracteristique: liste_caracteristique
+        ? JSON.parse(liste_caracteristique.toString())
         : []
     };
+
+    // Ajouter les paramètres de test du matching (si présents)
+    // Ces paramètres sont passés via l'URL pour les tests uniquement
+    // Ils doivent être encapsulés dans un objet "scoring"
+    //console.log('[API Matching] Scoring field received:', scoring);
+    if (scoring) {
+      const testParams = JSON.parse(scoring.toString());
+      // Encapsuler dans l'objet scoring
+      payload.scoring = testParams;
+      //console.log('[API Matching] Scoring params added to payload:', testParams);
+    } else {
+      //console.log('[API Matching] No scoring params received');
+    }
+
+    //console.log('[API Matching] Final payload to GraphRAG:', JSON.stringify(payload, null, 2));
 
     const response = await fetch(URL_API_MATCHING, {
       method: 'POST',

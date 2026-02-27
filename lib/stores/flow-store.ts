@@ -62,12 +62,12 @@ if (typeof window !== 'undefined') {
 
     if (shouldClear) {
       sessionStorage.removeItem('flow-storage');
-      console.log('[FlowStore] Storage cleared -', reason);
+      //console.log('[FlowStore] Storage cleared -', reason);
     }
 
     if (needsRedirect) {
       sessionStorage.setItem(NEEDS_REDIRECT_KEY, 'true');
-      console.log('[FlowStore] Redirect flag set');
+      //console.log('[FlowStore] Redirect flag set');
     }
 
     // Marquer la session comme active
@@ -124,12 +124,32 @@ export interface UserQuestionAnswer {
   timestamp: number;
 }
 
+// Paramètres de test pour le scoring du matching (passés via URL)
+export interface MatchingTestParams {
+  z_unmatched?: number;
+  e_unmatched?: number;
+  g_unknown_score?: number;
+  c_unknown_score?: number;
+  v_blocked?: number;
+  v_different?: number;
+  t_unmatched?: number;
+}
+
+// Statistiques de la catégorie (nb produits, nb fournisseurs)
+export interface CategoryStats {
+  productsCount: number;
+  suppliersCount: number;
+}
+
 export interface FlowState {
   // ID de la catégorie (depuis le token URL ou query param)
   categoryId: number | null;
 
   // Nom de la catégorie (depuis l'API questionnaire)
   categoryName: string | null;
+
+  // Statistiques de la catégorie (depuis l'API info-categorie)
+  categoryStats: CategoryStats | null;
 
   // Type de parcours (pour tracking GTM)
   flowType: FlowType;
@@ -175,17 +195,31 @@ export interface FlowState {
   // Flag pour indiquer que les critères ont été modifiés
   criteriaHaveChanged: boolean;
 
+  // IDs des critères supprimés par catégorie (pour pouvoir les réajouter)
+  removedCritiqueCriteriaIds: number[];
+  removedSecondaireCriteriaIds: number[];
+
   // Historique des questions/réponses de l'utilisateur (pour tracking et debug)
   userQuestionAnswers: UserQuestionAnswer[];
 
+  // Paramètres de test pour le scoring du matching (passés via URL)
+  matchingTestParams: MatchingTestParams | null;
+
   setMatchingResults: (results: { recommended: any[], others: any[] }) => void;
+  setMatchingTestParams: (params: MatchingTestParams | null) => void;
   setCharacteristicsMap: (characteristics: CharacteristicsMap) => void;
   setOrphanedSelectedSuppliers: (suppliers: Supplier[]) => void;
   setCriteriaHaveChanged: (changed: boolean) => void;
 
   setUserQuestionAnswers: (answers: UserQuestionAnswer[]) => void;
   addUserQuestionAnswer: (answer: UserQuestionAnswer) => void;
+  updateUserQuestionAnswer: (questionCode: string, updates: Partial<UserQuestionAnswer>) => void;
   clearUserQuestionAnswers: () => void;
+
+  setRemovedCritiqueCriteriaIds: (ids: number[]) => void;
+  setRemovedSecondaireCriteriaIds: (ids: number[]) => void;
+  addRemovedCriteriaId: (id: number, isCritique: boolean) => void;
+  removeRemovedCriteriaId: (id: number) => void;
 
   setFilesStore: (files: File[]) => void;
   addFilesStore: (newFiles: File[]) => void;
@@ -193,6 +227,7 @@ export interface FlowState {
   // Actions
   setCategoryId: (id: number) => void;
   setCategoryName: (name: string | null) => void;
+  setCategoryStats: (stats: CategoryStats | null) => void;
   setDdc: (ddc: string) => void;
   setUserAnswers: (answers: Record<number, string[]>) => void;
   setOtherTexts: (texts: Record<number, string>) => void;
@@ -222,6 +257,7 @@ export interface FlowState {
 const initialState = {
   categoryId: null,
   categoryName: null,
+  categoryStats: null,
   flowType: null as FlowType,
   userAnswers: {},
   otherTexts: {},
@@ -238,7 +274,10 @@ const initialState = {
   characteristicsMap: {},
   orphanedSelectedSuppliers: [],
   criteriaHaveChanged: false,
+  removedCritiqueCriteriaIds: [],
+  removedSecondaireCriteriaIds: [],
   userQuestionAnswers: [],
+  matchingTestParams: null,
   ddc: "",
 };
 
@@ -250,6 +289,8 @@ export const useFlowStore = create<FlowState>()(
       setCategoryId: (id) => set({ categoryId: id }),
 
       setCategoryName: (name) => set({ categoryName: name }),
+
+      setCategoryStats: (stats) => set({ categoryStats: stats }),
 
       setUserAnswers: (answers) => set({ userAnswers: answers }),
 
@@ -334,6 +375,8 @@ export const useFlowStore = create<FlowState>()(
 
       setMatchingResults: (results) => set({ matchingResults: results }),
 
+      setMatchingTestParams: (params) => set({ matchingTestParams: params }),
+
       setFlowType: (flowType) => set({ flowType }),
 
       setCharacteristicsMap: (characteristics) => set({ characteristicsMap: characteristics }),
@@ -349,7 +392,41 @@ export const useFlowStore = create<FlowState>()(
           userQuestionAnswers: [...state.userQuestionAnswers, answer],
         })),
 
+      updateUserQuestionAnswer: (questionCode, updates) =>
+        set((state) => ({
+          userQuestionAnswers: state.userQuestionAnswers.map((qa) =>
+            qa.questionCode === questionCode ? { ...qa, ...updates } : qa
+          ),
+        })),
+
       clearUserQuestionAnswers: () => set({ userQuestionAnswers: [] }),
+
+      setRemovedCritiqueCriteriaIds: (ids: number[]) => set({ removedCritiqueCriteriaIds: ids }),
+
+      setRemovedSecondaireCriteriaIds: (ids: number[]) => set({ removedSecondaireCriteriaIds: ids }),
+
+      addRemovedCriteriaId: (id: number, isCritique: boolean) =>
+        set((state) => {
+          if (isCritique) {
+            return {
+              removedCritiqueCriteriaIds: state.removedCritiqueCriteriaIds.includes(id)
+                ? state.removedCritiqueCriteriaIds
+                : [...state.removedCritiqueCriteriaIds, id],
+            };
+          } else {
+            return {
+              removedSecondaireCriteriaIds: state.removedSecondaireCriteriaIds.includes(id)
+                ? state.removedSecondaireCriteriaIds
+                : [...state.removedSecondaireCriteriaIds, id],
+            };
+          }
+        }),
+
+      removeRemovedCriteriaId: (id: number) =>
+        set((state) => ({
+          removedCritiqueCriteriaIds: state.removedCritiqueCriteriaIds.filter((i) => i !== id),
+          removedSecondaireCriteriaIds: state.removedSecondaireCriteriaIds.filter((i) => i !== id),
+        })),
 
     }),
     {

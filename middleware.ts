@@ -18,7 +18,7 @@ const PROTECTED_ROUTES = Object.keys(ROUTE_MAPPING);
 
 // URL de redirection pour les tokens invalides (page catégorie externe)
 // TODO: Remplacer par l'URL de la page catégorie réelle
-const INVALID_TOKEN_REDIRECT = process.env.INVALID_TOKEN_REDIRECT_URL || 'https://dev-www.hellopro.fr/categories';
+const INVALID_TOKEN_REDIRECT = process.env.INVALID_TOKEN_REDIRECT_URL || 'https://www.hellopro.fr/404.html';
 
 // =============================================================================
 // TOKEN VALIDATION - AES-256-CBC (inline pour éviter les imports dans Edge Runtime)
@@ -45,20 +45,21 @@ function base64UrlDecodeToBytes(str: string): Uint8Array {
 }
 
 /**
- * Vérifie si la date est valide (hier <= date < demain)
+ * Vérifie si la date est valide (48 heures max)
  */
 function isDateValid(dateStr: string): boolean {
   const tokenDate = new Date(dateStr);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
+  // Token valide pendant 48 heures (2 jours)
+  const twoDaysAgo = new Date(today);
+  twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
 
   const maxDate = new Date(today);
   maxDate.setDate(maxDate.getDate() + 1);
 
-  return tokenDate >= yesterday && tokenDate < maxDate;
+  return tokenDate >= twoDaysAgo && tokenDate < maxDate;
 }
 
 /**
