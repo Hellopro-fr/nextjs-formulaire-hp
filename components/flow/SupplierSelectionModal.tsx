@@ -456,13 +456,24 @@ const SupplierSelectionModal = ({userAnswers, onBackToQuestionnaire }: SupplierS
           )}
 
           {viewState === "custom-need" && (
-            <CustomNeedForm onBack={() => {
-              // Remettre flowType à 'principal' quand l'utilisateur annule
-              // depuis le formulaire "pas trouvé ce que vous cherchez"
-              setStoreFlowType('principal');
-              setFlowType('principal');
-              setViewState("selection");
-            }} />
+            <CustomNeedForm
+              onBack={() => {
+                // Remettre flowType à 'principal' quand l'utilisateur annule
+                // depuis le formulaire "pas trouvé ce que vous cherchez"
+                setStoreFlowType('principal');
+                setFlowType('principal');
+                setViewState("selection");
+              }}
+              onContactComplete={(isExistingBuyer) => {
+                if (isExistingBuyer) {
+                  // Acheteur connu : le formulaire a déjà soumis le lead et navigue automatiquement
+                  // Pas besoin d'action supplémentaire ici
+                } else {
+                  // Acheteur inconnu : naviguer vers Profile pour compléter les informations
+                  goToProfile();
+                }
+              }}
+            />
           )}
         </div>
 
