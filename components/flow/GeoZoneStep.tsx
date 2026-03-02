@@ -1,69 +1,17 @@
 'use client';
 
 import { useState, useMemo } from "react";
-import { ArrowLeft, ArrowRight, MapPin, Globe } from "lucide-react";
+import { ArrowLeft, ArrowRight, MapPin, Globe, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ProgressHeader from "./ProgressHeader";
+import { usePostalCodeSearch } from "@/hooks/usePostalCodeSearch";
 
-const COUNTRIES = [
-  "Afghanistan", "Afrique du Sud", "Albanie", "Algérie", "Allemagne", "Andorre", "Angola",
-  "Antigua-et-Barbuda", "Arabie saoudite", "Argentine", "Arménie", "Australie", "Autriche",
-  "Azerbaïdjan", "Bahamas", "Bahreïn", "Bangladesh", "Barbade", "Belgique", "Belize", "Bénin",
-  "Bhoutan", "Biélorussie", "Birmanie", "Bolivie", "Bosnie-Herzégovine", "Botswana", "Brésil",
-  "Brunei", "Bulgarie", "Burkina Faso", "Burundi", "Cambodge", "Cameroun", "Canada", "Cap-Vert",
-  "Centrafrique", "Chili", "Chine", "Chypre", "Colombie", "Comores", "Corée du Nord", "Corée du Sud",
-  "Costa Rica", "Côte d'Ivoire", "Croatie", "Cuba", "Danemark", "Djibouti", "Dominique",
-  "Égypte", "Émirats arabes unis", "Équateur", "Érythrée", "Espagne", "Estonie", "Eswatini",
-  "États-Unis", "Éthiopie", "Fidji", "Finlande", "France", "Gabon", "Gambie", "Géorgie", "Ghana", "Grèce",
-  "Grenade", "Guatemala", "Guinée", "Guinée équatoriale", "Guinée-Bissau", "Guyana", "Haïti",
-  "Honduras", "Hongrie", "Inde", "Indonésie", "Irak", "Iran", "Irlande", "Islande", "Israël",
-  "Italie", "Jamaïque", "Japon", "Jordanie", "Kazakhstan", "Kenya", "Kirghizistan", "Kiribati",
-  "Koweït", "Laos", "Lesotho", "Lettonie", "Liban", "Liberia", "Libye", "Liechtenstein",
-  "Lituanie", "Luxembourg", "Macédoine du Nord", "Madagascar", "Malaisie", "Malawi", "Maldives",
-  "Mali", "Malte", "Maroc", "Maurice", "Mauritanie", "Mexique", "Micronésie", "Moldavie",
-  "Monaco", "Mongolie", "Monténégro", "Mozambique", "Namibie", "Nauru", "Népal", "Nicaragua",
-  "Niger", "Nigeria", "Norvège", "Nouvelle-Zélande", "Oman", "Ouganda", "Ouzbékistan", "Pakistan",
-  "Palaos", "Palestine", "Panama", "Papouasie-Nouvelle-Guinée", "Paraguay", "Pays-Bas", "Pérou",
-  "Philippines", "Pologne", "Portugal", "Qatar", "République dominicaine", "République tchèque",
-  "Roumanie", "Royaume-Uni", "Russie", "Rwanda", "Saint-Kitts-et-Nevis", "Saint-Vincent-et-les-Grenadines",
-  "Sainte-Lucie", "Salomon", "Salvador", "Samoa", "São Tomé-et-Príncipe", "Sénégal", "Serbie",
-  "Seychelles", "Sierra Leone", "Singapour", "Slovaquie", "Slovénie", "Somalie", "Soudan",
-  "Soudan du Sud", "Sri Lanka", "Suède", "Suisse", "Suriname", "Syrie", "Tadjikistan", "Tanzanie",
-  "Tchad", "Thaïlande", "Timor oriental", "Togo", "Tonga", "Trinité-et-Tobago", "Tunisie",
-  "Turkménistan", "Turquie", "Tuvalu", "Ukraine", "Uruguay", "Vanuatu", "Vatican", "Venezuela",
-  "Viêt Nam", "Yémen", "Zambie", "Zimbabwe"
-];
 
-const POSTAL_CODE_CITIES = [
-  { postalCode: "75001", city: "Paris 1er" },
-  { postalCode: "75002", city: "Paris 2e" },
-  { postalCode: "75003", city: "Paris 3e" },
-  { postalCode: "75004", city: "Paris 4e" },
-  { postalCode: "75005", city: "Paris 5e" },
-  { postalCode: "75006", city: "Paris 6e" },
-  { postalCode: "75007", city: "Paris 7e" },
-  { postalCode: "75008", city: "Paris 8e" },
-  { postalCode: "75009", city: "Paris 9e" },
-  { postalCode: "75010", city: "Paris 10e" },
-  { postalCode: "75011", city: "Paris 11e" },
-  { postalCode: "75012", city: "Paris 12e" },
-  { postalCode: "69001", city: "Lyon 1er" },
-  { postalCode: "69002", city: "Lyon 2e" },
-  { postalCode: "69003", city: "Lyon 3e" },
-  { postalCode: "69100", city: "Villeurbanne" },
-  { postalCode: "33000", city: "Bordeaux" },
-  { postalCode: "33100", city: "Bordeaux" },
-  { postalCode: "31000", city: "Toulouse" },
-  { postalCode: "13001", city: "Marseille 1er" },
-  { postalCode: "44000", city: "Nantes" },
-  { postalCode: "59000", city: "Lille" },
-  { postalCode: "92000", city: "Nanterre" },
-  { postalCode: "92100", city: "Boulogne-Billancourt" },
-  { postalCode: "94000", city: "Créteil" },
-  { postalCode: "78000", city: "Versailles" },
-  { postalCode: "45000", city: "Orléans" },
-  { postalCode: "91000", city: "Évry-Courcouronnes" },
-];
+interface Country {
+  id: number;
+  libelle: string;
+}
+
 
 const STEPS = [
   { id: 1, label: "Votre besoin" },
@@ -72,39 +20,59 @@ const STEPS = [
 ];
 
 export interface GeoData {
+  countryId: number;
   country: string;
   postalCode: string;
   city: string;
 }
 
 interface GeoZoneStepProps {
-  onComplete: (data: GeoData) => void;
+  priorityCountries: Country[];
+  otherCountries: Country[];
+  onComplete: (data: GeoData) => void | Promise<void>;
   onBack: () => void;
 }
 
-const GeoZoneStep = ({ onComplete, onBack }: GeoZoneStepProps) => {
+const GeoZoneStep = ({ priorityCountries = [], otherCountries = [], onComplete, onBack }: GeoZoneStepProps) => {
   const [country, setCountry] = useState("France");
+  const [countryId, setCountryId] = useState(1);
   const [postalCode, setPostalCode] = useState("");
   const [city, setCity] = useState("");
   const [showPostalCodeSuggestions, setShowPostalCodeSuggestions] = useState(false);
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
   const [countrySearch, setCountrySearch] = useState("");
 
-  const filteredCountries = useMemo(() => {
-    if (!countrySearch.trim()) return COUNTRIES;
-    return COUNTRIES.filter((c) =>
-      c.toLowerCase().includes(countrySearch.toLowerCase())
-    );
-  }, [countrySearch]);
+  // Liste des pays avec séparateur pour l'affichage
+  const COUNTRIES_WITH_SEPARATOR = useMemo(() => {
+    const priorityCountryNames = new Set((priorityCountries || []).map((c) => c.libelle));
+    const filteredOtherCountries = (otherCountries || []).filter((c) => !priorityCountryNames.has(c.libelle));
+    return [...(priorityCountries || []), "---" as const, ...filteredOtherCountries];
+  }, [priorityCountries, otherCountries]);
 
-  const postalCodeSuggestions = useMemo(() => {
-    if (postalCode.length < 2) return [];
-    return POSTAL_CODE_CITIES.filter((item) =>
-      item.postalCode.startsWith(postalCode)
-    ).slice(0, 8);
-  }, [postalCode]);
+  // Liste des pays sans séparateur (pour les filtres)
+  const ALL_COUNTRIES = useMemo(() => {
+    const priorityCountryNames = new Set((priorityCountries || []).map((c) => c.libelle));
+    const filteredOtherCountries = (otherCountries || []).filter((c) => !priorityCountryNames.has(c.libelle));
+    return [...(priorityCountries || []), ...filteredOtherCountries];
+  }, [priorityCountries, otherCountries]);
+
+  const filteredCountries = useMemo(() => {
+    if (!countrySearch.trim()) return COUNTRIES_WITH_SEPARATOR;
+    return ALL_COUNTRIES.filter((c) =>
+      c.libelle.toLowerCase().includes(countrySearch.toLowerCase())
+    );
+  }, [countrySearch, COUNTRIES_WITH_SEPARATOR, ALL_COUNTRIES]);
 
   const isFrance = country === "France";
+
+  const { data: results, isLoading: postalCodeLoading } = usePostalCodeSearch({
+    query: postalCode,
+    enabled: postalCode.length >= 2 && !city && isFrance
+  });
+
+  const postalCodeSuggestions = useMemo(() => {
+    return (results || []).slice(0, 8);
+  }, [results]);
 
   const isValid = useMemo(() => {
     if (!country.trim()) return false;
@@ -114,7 +82,7 @@ const GeoZoneStep = ({ onComplete, onBack }: GeoZoneStepProps) => {
 
   const handleNext = () => {
     if (!isValid) return;
-    onComplete({ country, postalCode: isFrance ? postalCode : "", city: isFrance ? city : "" });
+    onComplete({ countryId, country, postalCode: isFrance ? postalCode : "", city: isFrance ? city : "" });
   };
 
   return (
@@ -173,24 +141,53 @@ const GeoZoneStep = ({ onComplete, onBack }: GeoZoneStepProps) => {
                           />
                         </div>
                         <div className="overflow-y-auto max-h-48">
-                          {filteredCountries.map((c) => (
+                          {/* France always first if no search */}
+                          {!countrySearch && (
                             <button
-                              key={c}
                               type="button"
                               onClick={() => {
-                                setCountry(c);
+                                setCountryId(1);
+                                setCountry("France");
                                 setShowCountryDropdown(false);
                                 setCountrySearch("");
-                                if (c !== "France") { setPostalCode(""); setCity(""); }
+                                // Reset postal code and city when country changes handled by useEffect or manually
                               }}
                               className={cn(
-                                "w-full text-left px-4 py-2 text-sm hover:bg-muted transition-colors",
-                                c === country ? "bg-primary/10 text-primary font-medium" : "text-foreground"
+                                "w-full text-left px-4 py-2 text-sm hover:bg-muted transition-colors border-b border-border",
+                                country === "France" ? "bg-primary/10 text-primary font-medium" : "text-foreground"
                               )}
                             >
-                              {c}
+                              France
                             </button>
-                          ))}
+                          )}
+                          {filteredCountries.map((c, idx) => {
+                            if (c === "---") {
+                              return <div key="sep" className="h-px bg-border my-1" />;
+                            }
+                            const countryItem = c as Country;
+                            return (
+                              <button
+                                key={countryItem.id}
+                                type="button"
+                                onClick={() => {
+                                  setCountryId(countryItem.id);
+                                  setCountry(countryItem.libelle);
+                                  setShowCountryDropdown(false);
+                                  setCountrySearch("");
+                                  if (countryItem.libelle !== "France") { 
+                                    setPostalCode(""); 
+                                    setCity(""); 
+                                  }
+                                }}
+                                className={cn(
+                                  "w-full text-left px-4 py-2 text-sm hover:bg-muted transition-colors",
+                                  countryItem.libelle === country ? "bg-primary/10 text-primary font-medium" : "text-foreground"
+                                )}
+                              >
+                                {countryItem.libelle}
+                              </button>
+                            );
+                          })}
                         </div>
                       </div>
                     )}
@@ -218,23 +215,34 @@ const GeoZoneStep = ({ onComplete, onBack }: GeoZoneStepProps) => {
                           className="w-full rounded-lg border border-input bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                           maxLength={5}
                         />
-                        {showPostalCodeSuggestions && postalCodeSuggestions.length > 0 && (
+                        {showPostalCodeSuggestions && postalCode.length >= 2 && !city && (
                           <div className="absolute z-20 mt-1 w-full rounded-lg border border-border bg-card shadow-lg max-h-48 overflow-y-auto">
-                            {postalCodeSuggestions.map((item, idx) => (
-                              <button
-                                key={idx}
-                                type="button"
-                                onMouseDown={(e) => e.preventDefault()}
-                                onClick={() => {
-                                  setPostalCode(item.postalCode);
-                                  setCity(item.city);
-                                  setShowPostalCodeSuggestions(false);
-                                }}
-                                className="w-full text-left px-4 py-2 text-sm hover:bg-muted transition-colors text-foreground"
-                              >
-                                <span className="font-medium">{item.postalCode}</span> — {item.city}
-                              </button>
-                            ))}
+                            {postalCodeLoading ? (
+                              <div className="flex items-center justify-center gap-2 py-4 text-sm text-muted-foreground">
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                Recherche...
+                              </div>
+                            ) : postalCodeSuggestions.length > 0 ? (
+                              postalCodeSuggestions.map((item, idx) => (
+                                <button
+                                  key={idx}
+                                  type="button"
+                                  onMouseDown={(e) => e.preventDefault()}
+                                  onClick={() => {
+                                    setPostalCode(item.postalCode);
+                                    setCity(item.city);
+                                    setShowPostalCodeSuggestions(false);
+                                  }}
+                                  className="w-full text-left px-4 py-2 text-sm hover:bg-muted transition-colors text-foreground"
+                                >
+                                  <span className="font-medium">{item.postalCode}</span> — {item.city}
+                                </button>
+                              ))
+                            ) : (
+                              <div className="px-4 py-3 text-sm text-muted-foreground text-center">
+                                Aucune ville trouvée
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>

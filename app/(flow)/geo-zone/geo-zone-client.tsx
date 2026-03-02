@@ -11,6 +11,17 @@ import type { GeoData } from '@/lib/stores/flow-store';
 import type { MatchingResponse, ProductInfoResponse } from '@/types/matching';
 import { basePath } from '@/lib/utils';
 
+
+interface Country {
+  id: number;
+  libelle: string;
+}
+
+interface GeoZoneClientProps {
+  priorityCountries: Country[];
+  otherCountries: Country[];
+}
+
 // Helper function to fetch product info
 async function fetchProductInfo(
   productIds: string[],
@@ -45,7 +56,10 @@ const getApiBasePath = () => {
   return basePath || '';
 };
 
-export default function GeoZoneClient() {
+export default function GeoZoneClient({
+  priorityCountries = [],
+  otherCountries = []
+}: GeoZoneClientProps) {
   const { setGeoData, categoryId, dynamicEquivalences, characteristicsMap, setMatchingResults } = useFlowStore();
   const [showLoader, setShowLoader] = useState(false);
   const { goToQuestionnaire, goToProfile, goToSelection } = useFlowNavigation();
@@ -84,6 +98,10 @@ export default function GeoZoneClient() {
 
       if (data.country) {
         metadonnee_utilisateurs["pays"] = data.country;
+      }
+
+      if (data.countryId) {
+        metadonnee_utilisateurs["id_pays"] = data.countryId;
       }
 
       if (data.postalCode) {
@@ -193,6 +211,8 @@ export default function GeoZoneClient() {
     <GeoZoneStep
       onComplete={handleComplete}
       onBack={handleBack}
+      priorityCountries={priorityCountries}
+      otherCountries={otherCountries}
     />
   );
 }

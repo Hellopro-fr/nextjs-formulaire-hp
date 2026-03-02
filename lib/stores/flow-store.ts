@@ -143,6 +143,7 @@ export interface CategoryStats {
 
 // Données de géolocalisation (country, postalCode, city)
 export interface GeoData {
+  countryId: number;
   country: string;
   postalCode: string;
   city: string;

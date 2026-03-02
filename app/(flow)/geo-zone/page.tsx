@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import type { Metadata } from 'next';
-import GeoZoneClient from './geo-zone-client';
+import GeoZoneServer from './geo-zone-server';
 
 export const metadata: Metadata = {
   title: 'Localisation - Où êtes-vous situé ?',
@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 export default function GeoZonePage() {
   return (
     <Suspense fallback={null}>
-      <GeoZoneClient />
+      <GeoZoneServer />
     </Suspense>
   );
 }
