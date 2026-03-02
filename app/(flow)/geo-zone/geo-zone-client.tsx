@@ -79,11 +79,16 @@ export default function GeoZoneClient() {
       const consolidatedEquivalences = consolidateEquivalences(dynamicEquivalences);
 
       // Préparer les métadonnées utilisateur avec les données géo
-      const metadonnee_utilisateurs: Record<string, string | number> = {
-        "pays": data.country,
-        "cp": data.postalCode,
-        // Note: typologie sera ajouté plus tard après ProfileTypeStep
-      };
+      // N'ajouter que les champs renseignés
+      const metadonnee_utilisateurs: Record<string, string | number> = {};
+
+      if (data.country) {
+        metadonnee_utilisateurs["pays"] = data.country;
+      }
+
+      if (data.postalCode) {
+        metadonnee_utilisateurs["cp"] = data.postalCode;
+      }
 
       const formData = new FormData();
       formData.append('id_categorie', categoryId?.toString() || '');
@@ -103,6 +108,7 @@ export default function GeoZoneClient() {
         id_categorie: categoryId,
         metadonnee_utilisateurs,
         liste_caracteristique: consolidatedEquivalences,
+        liste_caracteristique_length: consolidatedEquivalences.length,
         scoring: scoringParams
       });
 

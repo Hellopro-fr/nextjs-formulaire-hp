@@ -46,12 +46,12 @@ const getApiBasePath = () => {
   return basePath || '';
 };
 
-const type_typologie = {
-  "pro_france": "1",      // Professionnel
-  "pro_foreign": "1",     // Professionnel
-  "particulier": "2",     // Particulier
-  "creation": "1",        // Professionnel
-};
+// const type_typologie = {
+//   "pro_france": "1",      // Professionnel
+//   "pro_foreign": "1",     // Professionnel
+//   "particulier": "2",     // Particulier
+//   "creation": "1",        // Professionnel
+// };
 
 export function useProcessMatchingLogic() {
   const [showLoader, setShowLoader] = useState(false);
@@ -99,15 +99,16 @@ export function useProcessMatchingLogic() {
     }, categoryId, 1); // step_index = 1 (une seule étape pour le profil)
 
     try {
+      // const typologie = data?.type;
+      // const typologieValue = type_typologie[typologie as keyof typeof type_typologie] || "1";
 
-      const typologie = data?.type;
-      const typologieValue = type_typologie[typologie as keyof typeof type_typologie] || "1";
+      // Construire metadonnee_utilisateurs avec les données disponibles
+      const metadonnee_utilisateurs: Record<string, string | number> = {};
 
-      // Construire metadonnee_utilisateurs avec id_pays et cp si disponibles
-      const metadonnee_utilisateurs: Record<string, string | number> = {
-        "pays": data?.country || '',
-        "typologie": typologieValue
-      };
+      // Ajouter pays si disponible
+      if (data?.country) {
+        metadonnee_utilisateurs["pays"] = data.country;
+      }
 
       // Ajouter id_pays si disponible (vient de l'API geo)
       if (data?.countryID) {
@@ -275,14 +276,13 @@ export function useProcessMatchingLogic() {
     setShowLoader(true);
 
     try {
-      // Récupérer les métadonnées utilisateur du profileData
-      const typologie = profileData?.type;
-      const typologieValue = type_typologie[typologie as keyof typeof type_typologie] || "1";
+      // Construire metadonnee_utilisateurs avec les données disponibles
+      const metadonnee_utilisateurs: Record<string, string | number> = {};
 
-      const metadonnee_utilisateurs: Record<string, string | number> = {
-        "pays": profileData?.country || '',
-        "typologie": typologieValue
-      };
+      // Ajouter pays si disponible
+      if (profileData?.country) {
+        metadonnee_utilisateurs["pays"] = profileData.country;
+      }
 
       // Ajouter id_pays si disponible (vient de l'API geo)
       if (profileData?.countryID) {
