@@ -251,6 +251,26 @@ export function trackQuestionnaireComplete(totalQuestions: number, timeSpentSeco
 }
 
 /**
+ * Track l'affichage de la page geo-zone
+ */
+export function trackGeoZoneView() {
+  currentStepIndex++;
+  const isFirstViewForSession = isFirstView('geo_zone_page');
+
+  trackQuoteFunnel(currentStepIndex, 'geo-zone', 'localisation', {
+    is_first_view: isFirstViewForSession,
+  });
+}
+
+/**
+ * Track la complétion de la geo-zone (validation et passage à l'étape suivante)
+ */
+export function trackGeoZoneComplete() {
+  currentStepIndex++;
+  trackQuoteFunnel(currentStepIndex, 'geo-zone-complete', 'localisation');
+}
+
+/**
  * Track l'affichage de la page profil (choix pro/part)
  */
 export function trackProfileView() {
