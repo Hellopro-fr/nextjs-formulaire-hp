@@ -62,7 +62,8 @@ export default function GeoZoneClient({
 }: GeoZoneClientProps) {
   const { setGeoData, categoryId, dynamicEquivalences, characteristicsMap, setMatchingResults } = useFlowStore();
   const [showLoader, setShowLoader] = useState(false);
-  const { goToQuestionnaire, goToProfile, goToSelection } = useFlowNavigation();
+  const [RedirectGoToSomethingToAdd, setRedirectGoToSomethingToAdd] = useState(false);
+  const { goToQuestionnaire, goToProfile, goToSelection , goToSomethingToAdd} = useFlowNavigation();
   const hasTrackedView = useRef(false);
 
   // Track page view au montage
@@ -150,6 +151,17 @@ export default function GeoZoneClient({
         consolidatedEquivalences
       );
 
+        // Seuil minimum de produits pour afficher la sélection
+      // Condition : au moins 2 produits dans top_produit avec score >= 0.3 (30%)
+      const MIN_TOP_PRODUCTS         = 2;
+      const MIN_SCORE_THRESHOLD      = 0.3;
+      const topProductsWithGoodScore = (apiData.top_produit || []).filter(
+        (p: any) => Number(p.score) >= MIN_SCORE_THRESHOLD
+      );
+      const totalProducts = apiData.liste_produit.length + (apiData.top_produit?.length || 0);
+      const hasInsufficientResults = topProductsWithGoodScore.length < MIN_TOP_PRODUCTS;
+      setRedirectGoToSomethingToAdd(hasInsufficientResults);
+
       // Stocker les résultats initiaux
       setMatchingResults({ recommended, others });
 
@@ -194,7 +206,11 @@ export default function GeoZoneClient({
 
   const handleLoaderComplete = () => {
     // Navigation après le loader
-    goToSelection();
+    if(RedirectGoToSomethingToAdd){
+      goToSomethingToAdd();
+    }else{
+      goToSelection();
+    }
   };
 
   const handleBack = () => {

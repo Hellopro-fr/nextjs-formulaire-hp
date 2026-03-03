@@ -267,6 +267,7 @@ const ContactForm = ({ selectedSuppliers, onBack, onContactComplete }: ContactFo
     // Si acheteur inconnu: aller au ProfileTypeStep (le lead sera soumis après)
     if (isKnownBuyer) {
       // Submit lead for known buyers
+      console.log(leadSubmission);
       leadSubmission.mutate({
         contact: finalData,
         profile: profileData!,
