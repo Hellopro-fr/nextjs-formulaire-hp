@@ -10,6 +10,7 @@ import { normalizeMatchingToSuppliers, enrichSuppliersWithProductInfo } from '@/
 import type { GeoData } from '@/lib/stores/flow-store';
 import type { MatchingResponse, ProductInfoResponse } from '@/types/matching';
 import { basePath } from '@/lib/utils';
+import { trackGeoZoneView, trackGeoZoneComplete } from '@/lib/analytics';
 
 
 interface Country {
@@ -70,11 +71,14 @@ export default function GeoZoneClient({
   useEffect(() => {
     if (!hasTrackedView.current) {
       hasTrackedView.current = true;
-      // Track geo-zone page view if needed
+      trackGeoZoneView();
     }
   }, []);
 
   const handleComplete = async (data: GeoData) => {
+    // Track la complétion de l'étape geo-zone
+    trackGeoZoneComplete();
+
     // Sauvegarder les données dans le store
     setGeoData(data);
 
