@@ -11,10 +11,10 @@ export default function ContactSimpleClient() {
       onBack={goToSomethingToAdd}
       onContactComplete={(isExistingBuyer) => {
         if (isExistingBuyer) {
-          // Acheteur connu : le formulaire a déjà soumis le lead et navigue automatiquement
-          // Pas besoin d'action supplémentaire ici
+          // Acheteur connu : le formulaire a deja soumis le lead et navigue automatiquement
+          // Pas besoin d'action supplementaire ici
         } else {
-          // Acheteur inconnu : naviguer vers Profile pour compléter les informations
+          // Acheteur inconnu : naviguer vers Profile pour completer les informations
           goToProfile();
         }
       }}
