@@ -1,0 +1,189 @@
+DOCUMENTATION GTM - ÉVÉNEMENTS ACTIFS UNIQUEMENT
+Date de création,2026-03-02
+Projet,HelloPro - Funnel Devis+
+Version,2.0 - Post refactoring UX
+
+,,,,,,
+SECTION 1: ÉVÉNEMENT PRINCIPAL - devis_funnel_formulaire,,,,,,
+,,,,,,
+Description,Événement unique qui track toute la progression dans le funnel de demande de devis,,,,,,
+Nombre total de step_name,16 étapes différentes,,,,,,
+Utilisation,Systématique sur tout le parcours utilisateur,,,,,,
+
+,,,,,,
+Fonction de tracking,step_name,step_type,Données additionnelles,Lieu d'utilisation,Fichier source,Déclencheur
+trackGTMFunnelStart(),funnel-start,init,"rubrique_id, product.category5",Début du funnel,NeedsQuestionnaire.tsx,Au montage du composant questionnaire
+trackQuestionView(),1ere-question / 2eme-question / Neme-question,question,"question_id, question_title",Affichage de chaque question,NeedsQuestionnaire.tsx,Changement de question
+trackGTMQuestionnaireComplete(),questionnaire-complete,question,"total_questions, time_spent_seconds",Fin du questionnaire,NeedsQuestionnaire.tsx,Clic bouton Suivant après dernière question
+trackProfileView(),choix-propart,choix-propart,,Page choix Pro/Part,ProfileTypeStep.tsx,Au montage du composant profil
+trackProfileComplete(),choix-propart-complete,choix-propart,profile_type,Profil complété,ProfileTypeStep.tsx,Soumission du choix pro/part
+trackSelectionPageView(),selection-produits,selection,"recommended_count, total_count",Page sélection produits,selection-client.tsx,Au montage de la page sélection
+trackProductSelectionChange(),product-selection,selection,"product_id, action (ajouter/retirer), total_selected, is_first_add, is_first_remove",Ajout/retrait fournisseur,SupplierSelectionModal.tsx,Clic ajouter ou retirer un fournisseur
+trackComparisonModalView(),vue-comparaison,selection,is_first_view,Ouverture modal comparaison,SupplierSelectionModal.tsx,Clic bouton Comparer
+trackContactFormView(),formulaire-contact,contact,selected_count,Formulaire contact principal,ContactForm.tsx,Au montage du formulaire (parcours principal)
+trackCustomNeedPageView(),description-besoin,contact,is_first_view,Page description besoin,CustomNeedForm.tsx / SomethingToAddForm.tsx,Arrivée sur /something-to-add ou clic "Pas trouvé"
+trackCustomNeedContactView(),formulaire-contact-simple,contact,,Formulaire contact simplifié,CustomNeedForm.tsx / SomethingToAddForm.tsx,Passage à l'étape coordonnées (parcours alternatif)
+trackProductModalView(),vue-produit,selection,"product_id, is_first_view",Modal détails produit,ProductDetailModal.tsx,Clic sur une carte produit
+trackModifyCriteriaModalView(),vue-criteres,selection,is_first_view,Modal modification critères,ModifyCriteriaForm.tsx,Clic "Modifier mes critères"
+trackCriteriaModified(),criteres-modifies,selection,criteria_count,Modification effective critères,ModifyCriteriaForm.tsx,Clic bouton Affiner
+trackFormValidationErrors(),validation-error,contact,"errors_count, errors (array)",Erreurs de validation,Tous les formulaires,Tentative de soumission avec erreurs
+trackLeadSubmitted(),submit-success,conversion,"nombre_fournisseur, profile_type, user_known_status, conversion: true",Soumission lead réussie,Tous les formulaires de contact,Lead créé avec succès
+trackLeadSubmissionError(),submit-error,conversion,"error_type, error_message, conversion: false",Erreur de soumission,Tous les formulaires de contact,Échec de création du lead
+
+,,,,,,
+SECTION 2: ÉVÉNEMENTS SECONDAIRES ACTIFS,,,,,,
+,,,,,,
+Événement,Propriétés,Déclencheur,Fréquence,Fichier source,Notes
+device_info,"user_id, session_id, device_type, screen_width, screen_height, user_agent, timestamp",Chargement initial du site,1x par session,AnalyticsProvider.tsx,Informations sur l'appareil de l'utilisateur
+source_trafic,"user_id, session_id, utm_source, utm_medium, utm_campaign, utm_term, utm_content, referrer, landing_page, timestamp",Chargement initial du site,1x par session,AnalyticsProvider.tsx,Tracking des sources de trafic (UTM parameters)
+
+,,,,,,
+SECTION 3: DONNÉES CONTEXTUELLES (ajoutées à chaque événement devis_funnel_formulaire),,,,,,
+,,,,,,
+Propriété,Type,Description,Source,Exemple,Persistance
+user_id,string,Identifiant utilisateur unique,localStorage (hp_user_id),"user_1646064000000_abc123xyz",Permanent (survit aux sessions)
+session_id,string,Identifiant de session,sessionStorage (hp_session_id),"session_1646064000000_xyz789",Temporaire (effacé à la fermeture)
+rubrique_id,number,ID de la catégorie de produits,setFunnelContext() dans questionnaire,12,Durant le funnel
+product.category5,string,Nom de la catégorie,setFunnelContext() dans questionnaire,Compresseurs d'air,Durant le funnel
+flow_type,string,Type de parcours utilisateur,setFlowType(),"principal / pas_assez_produits / pas_trouve_recherchez / null",Durant le funnel
+step_name,string,Nom de l'étape actuelle,Passé à trackQuoteFunnel(),selection-produits,Par événement
+step_type,string,Type d'étape,Passé à trackQuoteFunnel(),"init / question / choix-propart / selection / contact / conversion",Par événement
+step_number,number,Numéro séquentiel de l'étape,Auto-incrémenté (step_index + 1),5,Par événement
+
+,,,,,,
+SECTION 4: TYPES DE PARCOURS (flow_type),,,,,,
+,,,,,,
+Valeur flow_type,Quand défini,Description,Exemple d'usage
+null,Avant le branchement,"Parcours pas encore déterminé (questionnaire, profil)",Pendant les questions et choix pro/part
+principal,Arrivée sur /selection avec produits,Parcours standard avec sélection de produits,L'utilisateur sélectionne des fournisseurs puis remplit le formulaire
+pas_assez_produits,Redirection automatique vers /something-to-add,Pas assez de produits correspondants,L'utilisateur décrit son besoin car peu de correspondances
+pas_trouve_recherchez,Clic "Pas trouvé ce que vous cherchez?" sur /selection,L'utilisateur a vu les produits mais n'a pas trouvé,L'utilisateur cherche quelque chose de plus spécifique
+
+,,,,,,
+SECTION 5: FLUX UTILISATEUR COMPLET,,,,,,
+,,,,,,
+Ordre,Page/Action,Événement GTM,step_name,flow_type,Notes
+1,Chargement du site,device_info + source_trafic,N/A,N/A,Événements secondaires (1x par session)
+2,Page d'accueil,Aucun tracking,N/A,N/A,
+3,Début questionnaire,devis_funnel_formulaire,funnel-start,null,Initialisation du funnel
+4,Question 1,devis_funnel_formulaire,1ere-question,null,
+5,Question 2,devis_funnel_formulaire,2eme-question,null,
+6,Question N,devis_funnel_formulaire,Neme-question,null,
+7,Fin questionnaire,devis_funnel_formulaire,questionnaire-complete,null,
+8,Page Geo-Zone,Aucun tracking actuellement,N/A,null,"Nouvelle étape, pas encore trackée"
+9,Page Choix Pro/Part,devis_funnel_formulaire,choix-propart,null,
+10,Choix validé,devis_funnel_formulaire,choix-propart-complete,null,
+11a,Page Sélection (assez de produits),devis_funnel_formulaire,selection-produits,principal,Parcours principal
+11b,Page Something-to-add (pas assez),devis_funnel_formulaire,description-besoin,pas_assez_produits,Parcours alternatif 1
+12a,Ajout/retrait fournisseur,devis_funnel_formulaire,product-selection,principal,Action sur parcours principal
+12a,Clic "Pas trouvé",Navigation vers /something-to-add,description-besoin,pas_trouve_recherchez,Bascule vers parcours alternatif 2
+13a,Modal comparaison,devis_funnel_formulaire,vue-comparaison,principal,Optionnel
+13a,Modal détails produit,devis_funnel_formulaire,vue-produit,principal,Optionnel
+13a,Modal modifier critères,devis_funnel_formulaire,vue-criteres,principal,Optionnel
+13a,Modification critères,devis_funnel_formulaire,criteres-modifies,principal,Si critères modifiés
+14a,Formulaire contact principal,devis_funnel_formulaire,formulaire-contact,principal,Avec fournisseurs sélectionnés
+14b,Formulaire contact simplifié,devis_funnel_formulaire,formulaire-contact-simple,pas_assez_produits / pas_trouve_recherchez,Sans sélection de fournisseurs
+15,Erreurs de validation (si erreurs),devis_funnel_formulaire,validation-error,tous,Si formulaire invalide
+16,Lead soumis avec succès,devis_funnel_formulaire,submit-success,tous,conversion: true
+16,Erreur soumission (si erreur),devis_funnel_formulaire,submit-error,tous,conversion: false
+17,Page Profile (si acheteur inconnu),devis_funnel_formulaire,choix-propart,tous,"Réutilise le tracking profil, post-contact"
+18,Profile complété (si inconnu),devis_funnel_formulaire,choix-propart-complete,tous,Fin du parcours pour inconnu
+
+,,,,,,
+SECTION 6: KPIs ET REQUÊTES GTM/GA4,,,,,,
+,,,,,,
+KPI,Événement,Filtre GTM/GA4,Usage
+Nombre d'arrivées funnel,devis_funnel_formulaire,step_name = 'funnel-start',Mesurer le trafic entrant
+Nombre d'arrivées Q1,devis_funnel_formulaire,step_name = '1ere-question',Taux de démarrage effectif du questionnaire
+Taux de complétion questionnaire,devis_funnel_formulaire,step_name = 'questionnaire-complete',Mesurer l'abandon pendant les questions
+Nombre choix Pro/Part,devis_funnel_formulaire,step_name = 'choix-propart',Arrivée sur l'étape profil
+Nombre arrivée sélection,devis_funnel_formulaire,step_name = 'selection-produits',Trafic vers parcours principal
+Nombre arrivée "besoin différent",devis_funnel_formulaire,step_name = 'description-besoin',Trafic vers parcours alternatif
+Taux de premier ajout fournisseur,devis_funnel_formulaire,"step_name = 'product-selection' AND is_first_add = true",Engagement sur la sélection (dédupliqué)
+Total clics ajout fournisseur,devis_funnel_formulaire,"step_name = 'product-selection' AND action = 'ajouter'",Engagement total (non dédupliqué)
+Taux ouverture comparaison,devis_funnel_formulaire,"step_name = 'vue-comparaison' AND is_first_view = true",Utilisation du comparatif (dédupliqué)
+Taux ouverture détails produit,devis_funnel_formulaire,"step_name = 'vue-produit' AND is_first_view = true",Consultation des fiches produits (dédupliqué)
+Taux modification critères,devis_funnel_formulaire,"step_name = 'criteres-modifies'",Ajustement des critères de recherche
+Nombre formulaires contact,devis_funnel_formulaire,"step_name = 'formulaire-contact' OR step_name = 'formulaire-contact-simple'",Arrivée sur formulaires (tous parcours)
+Taux d'erreur validation,devis_funnel_formulaire,step_name = 'validation-error',Qualité de saisie des formulaires
+Nombre de conversions TOTAL,devis_funnel_formulaire,"step_name = 'submit-success'",Leads créés (tous parcours confondus)
+Conversions parcours principal,devis_funnel_formulaire,"step_name = 'submit-success' AND flow_type = 'principal'",Leads avec sélection de produits
+Conversions "pas assez produits",devis_funnel_formulaire,"step_name = 'submit-success' AND flow_type = 'pas_assez_produits'",Leads via redirection automatique
+Conversions "pas trouvé",devis_funnel_formulaire,"step_name = 'submit-success' AND flow_type = 'pas_trouve_recherchez'",Leads via clic "pas trouvé"
+Taux d'erreur soumission,devis_funnel_formulaire,step_name = 'submit-error',Problèmes techniques de soumission
+Taux d'acheteurs connus vs inconnus,devis_funnel_formulaire,"step_name = 'submit-success', segmenté par user_known_status",Répartition acheteurs connus/inconnus
+
+,,,,,,
+SECTION 7: CONFIGURATION GTM RECOMMANDÉE,,,,,,
+,,,,,,
+Type,Nom,Configuration,Description
+Trigger,Funnel - Toutes étapes,event = 'devis_funnel_formulaire',Déclenche sur toutes les étapes du funnel
+Trigger,Funnel - Conversion,event = 'devis_funnel_formulaire' AND conversion = true,Déclenche uniquement sur les conversions
+Trigger,Funnel - Erreur,event = 'devis_funnel_formulaire' AND step_name = 'submit-error',Déclenche sur les erreurs de soumission
+Trigger,Device Info,event = 'device_info',Informations appareil (début de session)
+Trigger,Traffic Source,event = 'source_trafic',Sources de trafic UTM
+Variable,DLV - step_name,Data Layer Variable: step_name,Nom de l'étape actuelle
+Variable,DLV - step_type,Data Layer Variable: step_type,Type d'étape (init/question/selection/etc)
+Variable,DLV - step_number,Data Layer Variable: step_number,Numéro séquentiel de l'étape
+Variable,DLV - flow_type,Data Layer Variable: flow_type,Type de parcours (principal/pas_assez_produits/pas_trouve_recherchez)
+Variable,DLV - conversion,Data Layer Variable: conversion,Boolean de conversion (true/false)
+Variable,DLV - user_id,Data Layer Variable: user_id,ID utilisateur unique
+Variable,DLV - session_id,Data Layer Variable: session_id,ID de session
+Variable,DLV - profile_type,Data Layer Variable: profile_type,Type de profil (professional/individual)
+Variable,DLV - rubrique_id,Data Layer Variable: rubrique_id,ID de la catégorie de produits
+Variable,DLV - product.category5,Data Layer Variable: product.category5,Nom de la catégorie
+
+,,,,,,
+SECTION 8: FICHIERS SOURCE (DÉVELOPPEURS),,,,,,
+,,,,,,
+Fichier,Fonctions de tracking utilisées,Événements générés,Notes
+/lib/analytics/gtm.ts,Toutes les fonctions (définitions),N/A,Fichier source principal - définit toutes les fonctions
+/lib/analytics/index.ts,Exports,N/A,Point d'entrée - réexporte toutes les fonctions
+/components/flow/NeedsQuestionnaire.tsx,"trackGTMFunnelStart, trackQuestionView, trackGTMQuestionnaireComplete","funnel-start, questions, questionnaire-complete",Tracking du questionnaire
+/components/flow/ProfileTypeStep.tsx,"trackProfileView, trackProfileComplete","choix-propart, choix-propart-complete",Tracking choix pro/part
+/app/(flow)/selection/selection-client.tsx,trackSelectionPageView,selection-produits,Tracking page sélection
+/components/flow/SupplierSelectionModal.tsx,"trackProductSelectionChange, trackComparisonModalView","product-selection, vue-comparaison",Tracking sélection/comparaison produits
+/components/flow/ProductDetailModal.tsx,trackProductModalView,vue-produit,Tracking détails produit
+/components/flow/ModifyCriteriaForm.tsx,"trackModifyCriteriaModalView, trackCriteriaModified","vue-criteres, criteres-modifies",Tracking modification critères
+/components/flow/ContactForm.tsx,"trackContactFormView, trackFormValidationErrors, trackLeadSubmitted, trackLeadSubmissionError","formulaire-contact, validation-error, submit-success/error",Formulaire contact principal
+/components/flow/CustomNeedForm.tsx,"trackCustomNeedPageView, trackCustomNeedContactView, trackFormValidationErrors, trackLeadSubmitted, trackLeadSubmissionError","description-besoin, formulaire-contact-simple, validation-error, submit-success/error",Formulaire besoin personnalisé
+/components/flow/SomethingToAddForm.tsx,"trackCustomNeedPageView, trackCustomNeedContactView, trackFormValidationErrors, trackLeadSubmitted, trackLeadSubmissionError","description-besoin, formulaire-contact-simple, validation-error, submit-success/error",Formulaire something-to-add
+/components/flow/ContactFormSimple.tsx,trackFormValidationErrors,validation-error,Formulaire simplifié (pas de trackContactFormView car géré par parent)
+/components/providers/AnalyticsProvider.tsx,"trackDeviceInfo, trackTrafficSource, resetTrackingState","device_info, source_trafic",Provider global - initialisation analytics
+
+,,,,,,
+SECTION 9: DÉDUPLICATION (is_first_view),,,,,,
+,,,,,,
+Événement,Utilise is_first_view,Clé de stockage,Description
+vue-comparaison,Oui,hp_viewed_comparison_modal,true uniquement lors de la première ouverture du modal de comparaison dans la session
+vue-produit,Oui,hp_viewed_product_modal,true uniquement lors de la première ouverture d'un modal produit dans la session
+vue-criteres,Oui,hp_viewed_modify_criteria_modal,true uniquement lors de la première ouverture du modal critères dans la session
+description-besoin,Oui,hp_viewed_custom_need_page,true uniquement lors de la première vue de la page besoin dans la session
+product-selection (ajouter),Oui (is_first_add),hp_viewed_product_selection_ajouter,true uniquement lors du premier ajout de fournisseur dans la session
+product-selection (retirer),Oui (is_first_remove),hp_viewed_product_selection_retirer,true uniquement lors du premier retrait de fournisseur dans la session
+
+,,,,,,
+SECTION 10: ÉVÉNEMENTS DÉPRÉCIÉS (NON ACTIFS - NE PAS UTILISER),,,,,,
+,,,,,,
+Événement déprécié,Remplacé par,Notes
+vue_page_votre_besoin,devis_funnel_formulaire avec step_name: 'description-besoin',Ancienne version avant refactoring
+vue_page_vos_coordonnees,devis_funnel_formulaire avec step_name: 'formulaire-contact-simple',Ancienne version avant refactoring
+recherche_entreprise,Non remplacé (pas utilisé actuellement),Fonctionnalité peut-être à venir
+page_vue_critere,devis_funnel_formulaire avec step_name: 'vue-criteres',Intégré dans événement principal
+critere_modifie,devis_funnel_formulaire avec step_name: 'criteres-modifies',Intégré dans événement principal
+vue_modal_produit,devis_funnel_formulaire avec step_name: 'vue-produit',Intégré dans événement principal
+utilisateur_identifie,Pas actuellement utilisé,Fonctionnalité peut-être à venir
+abandon_funnel,Défini mais pas utilisé actuellement,À implémenter si besoin de tracking des abandons
+
+,,,,,,
+NOTES IMPORTANTES POUR LE SEO,,,,,,
+,,,,,,
+Point,Description
+Architecture simplifiée,Un seul événement principal (devis_funnel_formulaire) facilite la mise en place de tableaux de bord et l'analyse
+Déduplication intelligente,Les flags is_first_view permettent de mesurer à la fois l'engagement total et l'engagement unique par session
+Tracking du parcours complet,Le flow_type permet d'analyser séparément les 3 parcours utilisateurs et identifier celui qui convertit le mieux
+Identifiants persistants,"user_id (localStorage) et session_id (sessionStorage) permettent le suivi cross-session et l'analyse de cohortes"
+Données contextuelles riches,"rubrique_id, product.category5 permettent de segmenter les analyses par catégorie de produits"
+Compatibilité GA4,L'événement devis_funnel_formulaire peut être converti en événements GA4 via GTM pour une double analyse
+Respect RGPD,Pas de données personnelles dans les événements (sauf consentement utilisateur pour utilisateur_identifie)
+Performance optimisée,Les événements sont envoyés de manière asynchrone et n'impactent pas la performance du site

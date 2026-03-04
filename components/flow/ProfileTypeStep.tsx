@@ -101,7 +101,7 @@ const ProfileTypeStep = ({ priorityCountries, otherCountries, onComplete, onBack
   const [postalCode, setPostalCode] = useState(geoDataFS?.postalCode || "");
   const [city, setCity] = useState(geoDataFS?.city || "");
   const [particulierCity, setParticulierCity] = useState(geoDataFS?.city || "");
-  const [country, setCountry] = useState(geoDataFS?.countryId != 1 ? geoDataFS?.country : "");
+  const [country, setCountry] = useState((geoDataFS?.countryId != 1 ? geoDataFS?.country : "") || "");
   const [countryID, setCountryID] = useState(geoDataFS?.countryId != 1 ? geoDataFS?.countryId : 0);
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
   const [countrySearch, setCountrySearch] = useState("");

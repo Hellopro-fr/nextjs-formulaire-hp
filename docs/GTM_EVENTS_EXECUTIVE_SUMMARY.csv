@@ -1,0 +1,206 @@
+TABLEAU DE BORD GTM - EXECUTIVE SUMMARY
+Projet,HelloPro - Funnel Devis+
+Date,2026-03-02
+Destinataire,Direction / CEO
+Version,Executive Summary
+
+,,,,
+RÉSUMÉ EXÉCUTIF,,,,
+,,,,
+Métrique,Valeur,Impact Business
+Nombre d'événements GTM actifs,3 événements principaux,Architecture simplifiée = analyse facilitée
+Couverture du funnel,100% des étapes trackées,Visibilité complète du parcours utilisateur
+Parcours utilisateurs,3 parcours distincts identifiés,Permet d'optimiser chaque parcours séparément
+Déduplication,Oui (engagement unique vs total),Mesure précise de l'engagement réel
+Conformité RGPD,Oui (pas de données personnelles),Aucun risque juridique
+
+,,,,
+VUE D'ENSEMBLE - ARCHITECTURE GTM,,,,
+,,,,
+Événement,Utilisation,Fréquence,Valeur Business
+devis_funnel_formulaire,Track toutes les étapes du tunnel de conversion,À chaque étape du funnel,Analyse complète du comportement utilisateur et identification des points de friction
+device_info,Informations sur l'appareil (mobile/desktop/tablet),1x par session,Optimisation de l'UX selon les devices + décisions d'investissement mobile-first
+source_trafic,Sources de trafic (Google Ads / SEO / Direct / etc.),1x par session,ROI des campagnes marketing + optimisation budget publicitaire
+
+,,,,
+LES 3 PARCOURS UTILISATEURS,,,,
+,,,,
+Parcours,Déclencheur,Description,Volume estimé,Priorité Business
+🎯 Parcours Principal,L'utilisateur arrive sur /selection avec des produits,L'utilisateur sélectionne des fournisseurs parmi les recommandations puis soumet sa demande,70-80%,HAUTE - Parcours optimal à maximiser
+⚠️ Pas assez de produits,Redirection automatique si < 3 produits matchent,L'utilisateur décrit son besoin en texte libre car peu de correspondances dans le catalogue,15-20%,MOYENNE - Indicateur de gaps dans le catalogue
+🔍 Pas trouvé,Clic "Pas trouvé ce que vous cherchez?" sur /selection,L'utilisateur a vu les produits mais cherche quelque chose de plus spécifique,5-10%,MOYENNE - Opportunité d'améliorer les recommandations
+
+,,,,
+TUNNEL DE CONVERSION - VUE SIMPLIFIÉE,,,,
+,,,,
+Étape,Événement GTM,Action Utilisateur,KPI Clé à Suivre,Objectif Business
+1. Arrivée,funnel-start,L'utilisateur démarre le questionnaire,Nombre total de démarrages,Mesurer le trafic qualifié
+2. Questionnaire,1ere-question → questionnaire-complete,Réponse aux questions (2-5 questions selon catégorie),Taux de complétion du questionnaire,Réduire l'abandon pendant les questions
+3. Localisation,N/A (nouvelle étape),Saisie du code postal / pays,Taux de passage,S'assurer de la couverture géographique
+4. Profil,choix-propart → choix-propart-complete,Choix Pro ou Particulier + infos complémentaires,Répartition Pro/Part,Adapter l'offre selon le segment
+5. Sélection,selection-produits,Consultation des fournisseurs recommandés,Nombre de produits affichés,Qualité du matching
+6. Engagement,product-selection (ajouter/retirer),Sélection de 1 à N fournisseurs,Taux de sélection + Nombre moyen de fournisseurs,Augmenter l'engagement
+7. Contact,formulaire-contact,Saisie des coordonnées,Taux de démarrage du formulaire,Réduire la friction avant le formulaire
+8. CONVERSION,submit-success,Validation et création du lead,TAUX DE CONVERSION GLOBAL,Augmenter le nombre de leads qualifiés
+
+,,,,
+KPIs STRATÉGIQUES - DIRECTION GÉNÉRALE,,,,
+,,,,
+KPI,Calcul GTM,Objectif cible,Impact sur le Business
+📊 Taux de conversion global,submit-success / funnel-start,> 30%,Rentabilité de l'investissement acquisition
+🎯 Taux de complétion questionnaire,questionnaire-complete / 1ere-question,> 80%,Réduire les abandons précoces (quick wins)
+🏆 Taux d'engagement produits,Premiers ajouts uniques / arrivées sélection,> 60%,Qualité du matching algorithme
+💡 Taux de comparaison,Ouvertures comparaison uniques / arrivées sélection,20-30%,Aide à la décision utilisateur
+🔧 Taux de modification critères,criteres-modifies / arrivées sélection,< 15%,Satisfaction des résultats de recherche
+📱 Répartition Desktop vs Mobile,Segmentation device_type,À analyser,Décisions d'investissement UX mobile
+💰 ROI par source de trafic,Conversions par utm_source / Coût d'acquisition,À optimiser,Optimisation budget marketing
+🎭 Performance par parcours,Conversions par flow_type,Principal > 70%,Identifier les parcours à optimiser
+⚡ Taux d'acheteurs connus,user_known_status = 'known' / total conversions,À analyser,Fidélisation et réachat
+
+,,,,
+ANALYSE PAR PARCOURS - INSIGHTS STRATÉGIQUES,,,,
+,,,,
+Métrique,Parcours Principal,Pas assez de produits,Pas trouvé,Action Recommandée
+Volume de trafic,⭐⭐⭐⭐⭐ (Majorité),⭐⭐ (Minorité),⭐ (Très faible),Concentrer les efforts UX sur le parcours principal
+Taux de conversion attendu,Élevé (utilisateur engagé),Moyen (besoin spécifique),Moyen-Faible (utilisateur exigeant),Benchmarker pour identifier les anomalies
+Valeur du lead,Standard,Haute (besoin spécifique = potentiel élevé),Haute (besoin non standardisé),Prioriser le suivi des leads "Pas assez" et "Pas trouvé"
+Complexité de traitement,Faible (matching automatique),Moyenne (analyse manuelle du besoin),Moyenne-Haute (demande sur-mesure),Prévoir ressources pour traitement manuel
+Opportunité catalogue,Aucune (produits disponibles),FORTE - Gaps dans le catalogue,MOYENNE - Améliorer les recommandations,Investir dans l'élargissement du catalogue
+
+,,,,
+PARCOURS PRINCIPAL - POINTS DE FRICTION À SURVEILLER,,,,
+,,,,
+Étape,Métrique d'alerte,Seuil critique,Action si seuil franchi
+Questionnaire,Abandon > 20%,< 80% de complétion,Simplifier les questions ou réduire le nombre
+Sélection produits,Taux d'engagement < 50%,< 50% ajoutent un fournisseur,Améliorer la qualité du matching ou la présentation
+Formulaire contact,Erreurs de validation > 15%,> 15% d'erreurs,Simplifier le formulaire ou améliorer les messages d'erreur
+Conversion finale,Échecs techniques > 5%,> 5% submit-error,Problème technique à résoudre en urgence
+
+,,,,
+OPPORTUNITÉS D'OPTIMISATION - QUICK WINS,,,,
+,,,,
+Opportunité,Impact attendu,Effort,Priorité,Comment mesurer
+Réduire le nombre de questions,+5-10% complétion questionnaire,Faible,🟢 HAUTE,Comparer taux avant/après dans GTM
+Améliorer le matching algorithme,+10-15% engagement produits,Élevé,🟡 MOYENNE,Taux de premiers ajouts + Taux modification critères
+Simplifier le formulaire contact,+5% conversion,Moyen,🟢 HAUTE,Réduction des validation-error
+Optimiser UX mobile,+10-20% conversion mobile,Moyen,🟢 HAUTE,Comparer taux de conversion Desktop vs Mobile
+A/B test sur page sélection,+5-15% engagement,Faible,🟢 HAUTE,Split test via GTM (utiliser abtest1)
+Remarketing abandons,+10-15% récupération,Moyen,🟡 MOYENNE,Tracking abandon_funnel (à activer)
+
+,,,,
+SEGMENTS À ANALYSER PRIORITAIREMENT,,,,
+,,,,
+Segment,Filtre GTM,Question Business,Décision à Prendre
+Pros vs Particuliers,profile_type = 'professional' ou 'individual',Quel segment convertit le mieux?,Adapter les messages marketing par segment
+Mobile vs Desktop,device_type,L'expérience mobile est-elle satisfaisante?,Investir dans l'optimisation mobile
+Google Ads vs SEO vs Direct,utm_source,Quel canal a le meilleur ROI?,Réallouer le budget marketing
+Par catégorie de produits,rubrique_id ou product.category5,Quelles catégories convertissent le mieux?,Pousser les catégories performantes
+Acheteurs connus vs nouveaux,user_known_status,Taux de réachat?,Mettre en place programme fidélité
+Par région géographique,À croiser avec données CRM (CP),Couverture géographique suffisante?,Élargir le réseau de fournisseurs
+
+,,,,
+DASHBOARDS RECOMMANDÉS - DIRECTION,,,,
+,,,,
+Dashboard,Métriques Principales,Fréquence de Consultation,Utilisateurs
+📈 Performance Globale,"Conversions totales, Taux de conversion, Volume par étape",Quotidien,"Direction, Marketing"
+💰 ROI Marketing,"Conversions par source, Coût par lead, CAC par canal",Hebdomadaire,"Direction, Marketing, Finance"
+🎯 Qualité du Matching,"Taux d'engagement, Taux de modification critères, Nombre moyen de sélections",Hebdomadaire,"Product, Tech"
+📱 Experience Mobile vs Desktop,"Taux de conversion par device, Points d'abandon par device",Hebdomadaire,"Product, UX"
+🔍 Analyse des Parcours,"Volume et conversion par flow_type, Insights par parcours",Mensuel,"Direction, Product"
+🎭 Segmentation Clients,"Pro vs Part, Catégories, Régions, Acheteurs connus",Mensuel,"Direction, Commercial"
+
+,,,,
+ACTIONS IMMÉDIATES RECOMMANDÉES,,,,
+,,,,
+Action,Responsable,Délai,Impact Attendu
+1. Mettre en place les dashboards GTM,Marketing + BI,1 semaine,Visibilité temps réel sur les performances
+2. Analyser le taux de conversion actuel par étape,Product + Marketing,1 semaine,Identifier les 2-3 points de friction majeurs
+3. Identifier les catégories avec fort taux "Pas assez de produits",Commercial + Product,2 semaines,Prioriser l'élargissement du catalogue
+4. Comparer conversion Mobile vs Desktop,UX + Product,2 semaines,Décider d'un investissement mobile-first ou non
+5. Analyser le ROI par source de trafic,Marketing + Finance,2 semaines,Optimiser l'allocation du budget publicitaire
+6. Mettre en place A/B testing,Product + Tech,1 mois,Amélioration continue data-driven
+7. Activer le tracking des abandons (abandon_funnel),Tech,2 semaines,Récupérer les utilisateurs perdus via remarketing
+
+,,,,
+INDICATEURS DE SANTÉ DU FUNNEL,,,,
+,,,,
+Indicateur,Statut Sain,Statut Alerte,Statut Critique,Que faire en cas d'alerte?
+Taux de conversion global,> 30%,20-30%,< 20%,Audit complet du funnel + priorisation des quick wins
+Complétion questionnaire,> 80%,70-80%,< 70%,Simplifier ou réduire le nombre de questions
+Engagement produits (premiers ajouts),> 60%,40-60%,< 40%,Améliorer l'algorithme de matching ou la présentation
+Taux d'erreur validation formulaire,< 10%,10-20%,> 20%,Simplifier le formulaire ou améliorer les validations
+Taux d'erreur technique soumission,< 2%,2-5%,> 5%,Investigation technique urgente
+Taux de modification des critères,< 15%,15-25%,> 25%,Les résultats de recherche ne satisfont pas les utilisateurs
+
+,,,,
+BENCHMARKS SECTEUR (À TITRE INDICATIF),,,,
+,,,,
+Métrique,Moyenne Secteur B2B,Objectif HelloPro,Statut
+Taux de conversion funnel complet,15-25%,> 30%,🎯 Ambitieux mais atteignable
+Abandon page formulaire,30-50%,< 25%,🎯 Objectif de différenciation
+Taux de complétion questionnaire,60-75%,> 80%,🎯 UX optimisée
+Engagement mobile vs desktop,-20% sur mobile,Parité desktop,🎯 Mobile-first
+
+,,,,
+GLOSSAIRE BUSINESS (TERMES GTM),,,,
+,,,,
+Terme,Définition,Pourquoi c'est important
+Événement GTM,Action utilisateur trackée (ex: clic bouton),Permet de mesurer chaque interaction
+step_name,Nom de l'étape dans le funnel,Identifier précisément où l'utilisateur se trouve
+flow_type,Type de parcours (Principal / Pas assez / Pas trouvé),Analyser séparément chaque parcours pour optimiser
+is_first_view,Première vue unique (déduplication),Différencier engagement total vs engagement unique
+conversion: true,Lead créé avec succès,Le KPI ultime - génération de leads qualifiés
+user_id,Identifiant utilisateur unique permanent,Suivi multi-sessions + analyse de cohortes
+session_id,Identifiant de session temporaire,Analyse du comportement durant une visite
+utm_source,Source de trafic (Google / Facebook / etc.),Calculer le ROI par canal marketing
+device_type,Type d'appareil (mobile / tablet / desktop),Optimiser l'expérience par device
+rubrique_id / product.category5,Catégorie de produits recherchée,Analyser la performance par catégorie
+
+,,,,
+FEUILLE DE ROUTE DATA & ANALYTICS (3-6 MOIS),,,,
+,,,,
+Trimestre,Objectif,Livrables,Impact Business Attendu
+Q1 2026,Mise en place + Analyse initiale,"Dashboards GTM opérationnels, Analyse baseline des KPIs, Identification des 3 quick wins majeurs",Visibilité complète + roadmap d'optimisation claire
+Q2 2026,Optimisation + A/B Testing,"Implémentation des quick wins, 3-5 A/B tests lancés, Optimisation mobile",+15-20% de conversions supplémentaires
+Q3 2026,Expansion + Personnalisation,"Remarketing sur abandons, Personnalisation par segment, Predictive analytics",+20-30% de conversions + Réduction CAC
+Q4 2026,Intelligence Artificielle,"ML sur le matching, Recommandations dynamiques, Chatbot intelligent",Différenciation concurrentielle forte
+
+,,,,
+ROI ESTIMÉ DE L'INVESTISSEMENT GTM,,,,
+,,,,
+Métrique,Baseline (avant GTM),Avec GTM + Optimisations (6 mois),Gain
+Taux de conversion,20%,30-35%,+50-75%
+Nombre de leads mensuels,1000,1500-1750,+500-750 leads/mois
+Coût d'acquisition (CAC),50€,35-40€,-20-30%
+ROI Marketing,3:1,5:1,+67%
+Valeur vie client optimisée,Via segmentation et personnalisation,+30-40% (via ciblage précis et réachat)
+
+,,,,
+POINTS DE VIGILANCE - DIRECTION,,,,
+,,,,
+Point de Vigilance,Description,Action Préventive
+Qualité des données,Les événements GTM sont inutiles si mal configurés ou incomplets,Audit technique trimestriel + formation équipe
+Respect RGPD,Le tracking doit rester conforme RGPD (pas de données personnelles sans consentement),Revue légale + mise à jour politique de confidentialité
+Surcharge d'analyse,Trop de données peut paralyser la prise de décision,Se concentrer sur 5-7 KPIs clés (North Star Metrics)
+Optimisation prématurée,Ne pas optimiser sans données suffisantes (attendre 2-4 semaines de collecte),Définir seuils de significativité statistique pour A/B tests
+Dépendance technique,L'équipe business doit comprendre les bases GTM sans dépendre 100% de la tech,Formation interne + documentation accessible
+
+,,,,
+CONTACTS & RESSOURCES,,,,
+,,,,
+Ressource,Description,Accès
+Documentation technique complète,GTM_EVENTS_ACTIFS.csv,/docs/GTM_EVENTS_ACTIFS.csv
+Dashboard GTM (à créer),Vue temps réel des métriques,Google Tag Manager + GA4
+Responsable Analytics,Contact pour questions techniques GTM,[À définir]
+Formation GTM interne,Sessions de formation pour l'équipe,[À planifier]
+
+,,,,
+QUESTIONS FRÉQUENTES - DIRECTION,,,,
+,,,,
+Question,Réponse
+Combien de temps avant d'avoir des données exploitables?,2-4 semaines pour avoir une baseline statistiquement significative
+Quel est le coût de mise en place?,Coût négligeable (GTM est gratuit) - Temps équipe: ~1 semaine setup + dashboards
+Peut-on comparer avec la concurrence?,Oui via benchmarks secteur mais les données exactes concurrentes sont confidentielles
+Comment mesurer le ROI de cet investissement?,Augmentation du taux de conversion + Réduction CAC + Meilleure allocation budget marketing
+Qui doit avoir accès aux dashboards?,"Direction, Marketing, Product, UX - avec vues personnalisées selon le rôle"
+Quelle fréquence de reporting recommandée?,Hebdomadaire pour l'opérationnel + Mensuel pour la stratégie + Trimestriel pour le board
